@@ -45,4 +45,4 @@ ID :[a-zA-Z_][a-zA-Z0-9_]*;
 NEWLINE : '\r'|'\n';
 //skip
 WS : [ \t] -> skip;
-JUNK : [@#`] -> skip;
+JUNK : [@$`] -> skip;
