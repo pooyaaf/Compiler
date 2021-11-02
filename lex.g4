@@ -1,4 +1,4 @@
-lexer grammar lex;
+lexer grammar lexers;
 //literals :
 KEYWORD :
             'int'|'bool'|'fptr'
@@ -45,7 +45,7 @@ ID :[a-zA-Z_][a-zA-Z0-9_]*;
 //
 NEWLINE : '\r'|'\n';
 //skip
-USTAR:'/*';
+USTART:'/*';
 DSTAR:'*/';
 WS : [ \t] -> skip;
 JUNK : [@$`] -> skip;
