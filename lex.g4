@@ -44,7 +44,7 @@ ID :[a-zA-Z_][a-zA-Z0-9_]*;
 //
 NEWLINE : '\r'|'\n';
 //skip
-USTART:'/*';
+USTAR:'/*';
 DSTAR:'*/';
 WS : [ \t] -> skip;
 JUNK : [@$`] -> skip;
