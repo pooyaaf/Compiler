@@ -3,8 +3,9 @@ lexer grammar lexers;
 KEYWORD :
             'int'|'bool'|'fptr'
  ;
- LIST:'list';
+
 //literals :
+LIST:'list';
 MAIN : 'main';
 STRUCT :'struct';
 DISPLAY:'display';
