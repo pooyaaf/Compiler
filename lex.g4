@@ -1,8 +1,9 @@
 lexer grammar lex;
 //literals :
 KEYWORD :
-            'list'|'int'|'bool'|'fptr'
+            'int'|'bool'|'fptr'
  ;
+ LIST:'list';
 //literals :
 MAIN : 'main';
 STRUCT :'struct';
