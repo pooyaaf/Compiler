@@ -1,6 +1,17 @@
 grammar TestGrammar;
 /*parser | CFG */
 cmm:( struct* | function* ) main +EOF;
+
+//--- expr ---
+expr
+        :
+        term + expr | term
+        ;
+
+term
+        :
+        (ID|INTVAL) OPERATOR term | LPAR expr RPAR OPERATOR term | LPAR expr RPAR | ID | INTVAL
+        ;
 //Functions & Main:
 
 main:
@@ -27,7 +38,29 @@ struct:
 retrun_begin :
  BEGIN statement*  RETURN (INTVAL | BOOLEANVAL | (ID'.'ID) | ID) (SEMICOLON)? END
 ;
-
+// -- if - while - do --
+while
+        :
+        WHILE '~'? LPAR relation RPAR begin? statement
+        ;
+do
+        :
+        DO (begin)? WHILE LPAR relation RPAR
+        ;
+if
+        :
+        IF LPAR relation? RPAR (begin)?
+        ;
+else :
+        ELSE begin
+        | ELSE statement
+        | ELSE retrun_statement
+;
+relation
+        :
+        expr RELATION expr
+        ;
+//
 begin :
      BEGIN statement* END
 ;
@@ -36,6 +69,7 @@ retrun_statement:
     RETURN (INTVAL | BOOLEANVAL | (ID'.'ID) | ID) (SEMICOLON)?
    ;
 
+//
 statement: (assignment | built_in ) (SEMICOLON)?;
 
 // should be worked on
@@ -50,6 +84,7 @@ assignment :
 | STRUCT ID ID
 | KEYWORD ID
 ;
+
 
 /* lexical | Tokens */
 
@@ -81,7 +116,7 @@ OPERATOR :
             '+' | '-' | '*' | '/'
 ;
 RELATION :
-          '&' | '|' | '~' | '==' | '>' | '<'
+          '&' | '|' | '~' | '==' | '!=' | '>' | '<'
 ;
 COMMA :
 ','
