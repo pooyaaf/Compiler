@@ -7,26 +7,48 @@ main:
     MAIN LPAR RPAR (begin|statement)
 ;
 function:
-    (VOID|KEYWORD) ID LPAR ( parameters? (',' parameters)*) RPAR (begin|statement)
+    LIST SHARP KEYWORD ID LPAR ( parameters? (',' parameters)*) RPAR (retrun_begin|retrun_statement)
+    | KEYWORD ID LPAR ( parameters? (',' parameters)*) RPAR (retrun_begin|retrun_statement)
+    | VOID ID LPAR ( parameters? (',' parameters)*) RPAR (begin|statement)
 ;
 body:
     statement
 ;
 parameters :
-    KEYWORD ID
+    STRUCT ID ID
+    |KEYWORD ID
 ;
 //struct Declaring:
+// should be worked on
 struct:
-    STRUCT ID begin?
+    STRUCT ID begin? statement
 ;
+//
+retrun_begin :
+ BEGIN statement*  RETURN (INTVAL | BOOLEANVAL | (ID'.'ID) | ID) (SEMICOLON)? END
+;
+
 begin :
      BEGIN statement* END
 ;
 //assignment
-statement:assignment (SEMICOLON)?;
+retrun_statement:
+    RETURN (INTVAL | BOOLEANVAL | (ID'.'ID) | ID) (SEMICOLON)?
+   ;
+
+statement: (assignment | built_in ) (SEMICOLON)?;
+
+// should be worked on
+built_in :
+        DISPLAY (LPAR ID)? LPAR(INTVAL | BOOLEANVAL | ID)* RPAR? RPAR
+    |   SIZE  LPAR (INTVAL | BOOLEANVAL | ID) RPAR
+    | APPEND LPAR (INTVAL | BOOLEANVAL | ID) COMMA (INTVAL | BOOLEANVAL | ID) RPAR
+;
 assignment :
-KEYWORD ID ASSIGNMENT (INTVAL | BOOLEANVAL | ID)
+  KEYWORD ID ASSIGNMENT (INTVAL | BOOLEANVAL | ID)
 | ID ASSIGNMENT (INTVAL | BOOLEANVAL | ID)
+| STRUCT ID ID
+| KEYWORD ID
 ;
 
 /* lexical | Tokens */
