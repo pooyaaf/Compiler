@@ -27,7 +27,11 @@ body:
 ;
 parameters :
     STRUCT ID ID
-    |KEYWORD ID
+    | list_declare KEYWORD ID
+    | KEYWORD ID
+;
+list_declare:
+    list_declare LIST SHARP |LIST SHARP
 ;
 //struct Declaring:
 // should be worked on
@@ -36,8 +40,13 @@ struct:
 ;
 //
 retrun_begin :
- BEGIN statement*  RETURN (INTVAL | BOOLEANVAL | (ID'.'ID) | ID) (SEMICOLON)? END
+ BEGIN statement*  RETURN (INTVAL | BOOLEANVAL | (ID'.'ID) | ID | expr) (SEMICOLON)? END
 ;
+//
+begin :
+     BEGIN (statement* | (if else)* | if*| while* | do*)  END
+;
+statement: (assignment | built_in  ) (SEMICOLON)?;
 // -- if - while - do --
 while
         :
@@ -62,17 +71,12 @@ relation
         :
         expr RELATION expr
         ;
-//
-begin :
-     BEGIN statement* END
-;
+
 //assignment
 retrun_statement:
-    RETURN (INTVAL | BOOLEANVAL | (ID'.'ID) | ID) (SEMICOLON)?
+    RETURN (INTVAL | BOOLEANVAL | (ID'.'ID) | ID |expr) (SEMICOLON)?
    ;
 
-//
-statement: (assignment | built_in ) (SEMICOLON)?;
 
 // should be worked on
 built_in :
@@ -81,10 +85,10 @@ built_in :
     | APPEND LPAR (INTVAL | BOOLEANVAL | ID) COMMA (INTVAL | BOOLEANVAL | ID) RPAR
 ;
 assignment :
-  KEYWORD ID ASSIGNMENT (INTVAL | BOOLEANVAL | ID)
+  KEYWORD ID ASSIGNMENT (INTVAL | BOOLEANVAL | ID) (',' ID)*
 | ID ASSIGNMENT (INTVAL | BOOLEANVAL | ID)
 | STRUCT ID ID
-| KEYWORD ID
+| KEYWORD (ID(','ID)*|ID)
 ;
 
 
