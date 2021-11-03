@@ -49,7 +49,9 @@ do
         ;
 if
         :
-        IF LPAR relation? RPAR (begin)?
+        IF LPAR relation RPAR (begin)?
+        |IF LPAR relation RPAR statement
+        | IF LPAR relation RPAR retrun_statement
         ;
 else :
         ELSE begin
