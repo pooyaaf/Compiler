@@ -18,8 +18,8 @@ main:
     MAIN LPAR RPAR (begin|statement)
 ;
 function:
-    LIST SHARP KEYWORD ID LPAR ( parameters? (',' parameters)*) RPAR (retrun_begin|retrun_statement)
-    | KEYWORD ID LPAR ( parameters? (',' parameters)*) RPAR (retrun_begin|retrun_statement)
+    LIST SHARP KEYWORD ID LPAR ( parameters? (',' parameters)*) RPAR (return_begin|return_statement)
+    | KEYWORD ID LPAR ( parameters? (',' parameters)*) RPAR (return_begin|return_statement)
     | VOID ID LPAR ( parameters? (',' parameters)*) RPAR (begin|statement)
 ;
 body:
@@ -36,21 +36,24 @@ list_declare:
 //struct Declaring:
 // should be worked on
 struct:
-    STRUCT ID begin? statement
+    STRUCT ID begin?
 ;
 //
-retrun_begin :
+return_begin :
  BEGIN statement*  RETURN (INTVAL | BOOLEANVAL | (ID'.'ID) | ID | expr) (SEMICOLON)? END
 ;
 //
 begin :
-     BEGIN (statement* | (if else)* | if*| while* | do*)  END
+     BEGIN (statement* | (if else)* )  END
 ;
-statement: (assignment | built_in  ) (SEMICOLON)?;
-// -- if - while - do --
+statement: (assignment | built_in | if | while | do | function_call) (SEMICOLON)?;
+// -- if - while - do -- function-call
+function_call :
+    ID LPAR (BOOLEANVAL*|INTVAL*|ID*) RPAR SEMICOLON?
+;
 while
         :
-        WHILE '~'? LPAR relation RPAR begin? statement
+        WHILE '~'? LPAR (relation|BOOLEANVAL) RPAR begin? statement
         ;
 do
         :
@@ -58,14 +61,14 @@ do
         ;
 if
         :
-        IF LPAR relation RPAR (begin)?
-        |IF LPAR relation RPAR statement
-        | IF LPAR relation RPAR retrun_statement
+        IF LPAR? (relation|BOOLEANVAL) RPAR? (begin)?
+        |IF LPAR? (relation|BOOLEANVAL) RPAR? statement
+        | IF LPAR? (relation|BOOLEANVAL) RPAR? return_statement
         ;
 else :
         ELSE begin
         | ELSE statement
-        | ELSE retrun_statement
+        | ELSE return_statement
 ;
 relation
         :
@@ -73,7 +76,7 @@ relation
         ;
 
 //assignment
-retrun_statement:
+return_statement:
     RETURN (INTVAL | BOOLEANVAL | (ID'.'ID) | ID |expr) (SEMICOLON)?
    ;
 
@@ -86,7 +89,8 @@ built_in :
 ;
 assignment :
   KEYWORD ID ASSIGNMENT (INTVAL | BOOLEANVAL | ID) (',' ID)*
-| ID ASSIGNMENT (INTVAL | BOOLEANVAL | ID)
+| ID ASSIGNMENT (INTVAL | BOOLEANVAL | ID | expr)
+| list_declare KEYWORD ID
 | STRUCT ID ID
 | KEYWORD (ID(','ID)*|ID)
 ;
