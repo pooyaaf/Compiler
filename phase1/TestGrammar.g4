@@ -40,7 +40,7 @@ struct:
 ;
 //
 return_begin :
- BEGIN statement*  RETURN (INTVAL | BOOLEANVAL | (ID'.'ID) | ID | expr) (SEMICOLON)? END
+ BEGIN statement*  RETURN (INTVAL | BOOLEANVAL |  (ID'.'ID) | ID | expr) (SEMICOLON)? END
 ;
 //
 begin :
@@ -83,15 +83,22 @@ return_statement:
 
 // should be worked on
 built_in :
-        DISPLAY (LPAR ID)? LPAR(INTVAL | BOOLEANVAL | ID)* RPAR? RPAR
+        DISPLAY (LPAR ID)? LPAR(INTVAL | BOOLEANVAL | ID)?(','INTVAL | ','BOOLEANVAL | ','ID)* RPAR? RPAR
     |   SIZE  LPAR (INTVAL | BOOLEANVAL | ID) RPAR
     | APPEND LPAR (INTVAL | BOOLEANVAL | ID) COMMA (INTVAL | BOOLEANVAL | ID) RPAR
 ;
+//fptr < type -> type > ID
+fptr_call :
+    FPTR '<' (KEYWORD|STRUCT|list_declare)?(','KEYWORD|','STRUCT|','list_declare)* '-''>' (KEYWORD|STRUCT|LIST)  '>' ID
+;
+//--assignment
 assignment :
   KEYWORD ID ASSIGNMENT (INTVAL | BOOLEANVAL | ID) (',' ID)*
-| ID ASSIGNMENT (INTVAL | BOOLEANVAL | ID | expr)
+| ID ASSIGNMENT (INTVAL | BOOLEANVAL | ID | expr )
+| fptr_call (ASSIGNMENT ID)?
 | list_declare KEYWORD ID
 | STRUCT ID ID
+| ID ASSIGNMENT (INTVAL | BOOLEANVAL | ID | expr )
 | KEYWORD (ID(','ID)*|ID)
 ;
 
@@ -99,9 +106,9 @@ assignment :
 /* lexical | Tokens */
 
 KEYWORD :
-            'int'|'bool'|'fptr'
+            'int'|'bool'
  ;
-
+FPTR:'fptr';
 LIST:'list';
 //literals :
 MAIN : 'main';
