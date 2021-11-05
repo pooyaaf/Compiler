@@ -1,5 +1,5 @@
 grammar TestGrammar;
-cmm:( struct | function)* main EOF;
+cmm:struct* function* main EOF;
 
 expr:
     (term + expr | term)
@@ -27,7 +27,8 @@ begin_struct :
 
 
 body:
-    (built_in | assignment | ifstatement | whileloop | dostatement | function_call | returnfunc | getset | fptr_call)*
+    (built_in | assignment | ifstatement | whileloop | dostatement | function_call | returnfunc | fptr_call)* getset?
+    (built_in | assignment | ifstatement | whileloop | dostatement | function_call | returnfunc | fptr_call)*
 ;
 
 
@@ -45,7 +46,7 @@ returnfunc:
 
 
 built_in:
-    DISPLAY LPAR (expr | BOOLEANVAL)
+    DISPLAY LPAR (expr | BOOLEANVAL | ID)
     |SIZE  LPAR ID RPAR
     |APPEND LPAR ( ID ) COMMA ( list_declare | BOOLEANVAL | ID | INTVAL | expr) RPAR
 ;
@@ -75,7 +76,7 @@ whileloop:
 
 dostatement
         :
-        DO (begin | body) WHILE LPAR relation RPAR
+        DO (begin | body) WHILE LPAR (relation | BOOLEANVAL | expr) RPAR
 ;
 
 function_call:
@@ -113,7 +114,7 @@ getset:
 ;
 
 operation_symbols:
-    PLUS | MINUS | MULTIPICATION | DEVIDE   
+    PLUS | MINUS | MULTIPICATION | DEVIDE
 ;
 
 KEYWORD :
