@@ -6,7 +6,7 @@ expr:
 ;
 
 term:
-    (ID|INTVAL) OPERATOR term | LPAR expr RPAR OPERATOR term | LPAR expr RPAR | ID | INTVAL
+    (ID|INTVAL) operation_symbols term | LPAR expr RPAR operation_symbols term | LPAR expr RPAR | ID | INTVAL
 ;
 
 struct:
@@ -27,7 +27,7 @@ begin_struct :
 
 
 body:
-    (built_in | assignment | ifstatement | whileloop | dostatement | function_call | returnfunc | getset)*
+    (built_in | assignment | ifstatement | whileloop | dostatement | function_call | returnfunc | getset | fptr_call)*
 ;
 
 
@@ -40,28 +40,29 @@ dot_id:
 ;
 
 returnfunc:
-    RETURN (list_declare | BOOLEANVAL | dot_id | ID |expr | INTVAL)
+    RETURN (list_declare | BOOLEANVAL | dot_id | ID |expr | INTVAL) SEMICOLON?
 ;
 
 
 built_in:
     DISPLAY LPAR (expr | BOOLEANVAL)
     |SIZE  LPAR ID RPAR
-    |APPEND LPAR ( ID | list_declare) COMMA ( list_declare | BOOLEANVAL | ID | INTVAL ) RPAR
+    |APPEND LPAR ( ID ) COMMA ( list_declare | BOOLEANVAL | ID | INTVAL | expr) RPAR
 ;
 
 assignment:
-    KEYWORD ID ASSIGNMENT ((INTVAL | BOOLEANVAL | ID)',')*
-    |ID ASSIGNMENT (INTVAL | BOOLEANVAL | ID | expr )
-    |fptr_call (ASSIGNMENT ID)?
-    |list_declare (((KEYWORD | FPTR) ID) | struct_declation)
+    KEYWORD ID ASSIGNMENT ((INTVAL | BOOLEANVAL | ID)',')* SEMICOLON?
+    |ID ASSIGNMENT (INTVAL | BOOLEANVAL | ID | expr | function_call) SEMICOLON?
+    |fptr_call (ASSIGNMENT expr)? SEMICOLON?
+    |list_declare (((KEYWORD | FPTR) ID) | struct_declation) SEMICOLON?
     |struct_declation
-    |KEYWORD (ID(','ID)*|ID)
+    |KEYWORD (ID(','ID)*|ID) SEMICOLON?
     |KEYWORD ID SEMICOLON?
+    |dot_id (ASSIGNMENT expr)?  SEMICOLON?
 ;
 
 struct_declation:
-    STRUCT ID ID
+    STRUCT ID ID (',' ID)*
 ;
 
 ifstatement:
@@ -78,7 +79,7 @@ dostatement
 ;
 
 function_call:
-    ID LPAR (BOOLEANVAL | INTVAL | ID)* RPAR SEMICOLON?
+    ID LPAR (BOOLEANVAL | INTVAL | ID | expr )? (','(BOOLEANVAL | INTVAL | ID | expr ))*   RPAR SEMICOLON?
 ;
 
 parameters:
@@ -90,7 +91,7 @@ parameters:
 
 
 fptr_call :
-    FPTR '<' (KEYWORD|STRUCT|list_declare)?(','KEYWORD|','STRUCT|','list_declare)* '-''>' (KEYWORD|STRUCT|LIST)  '>' ID
+    FPTR '<' (KEYWORD|STRUCT|list_declare)?(','KEYWORD|','STRUCT|','list_declare)* '-''>' (KEYWORD|STRUCT|list_declare* (KEYWORD | ID ))  '>' ID
 ;
 
 
@@ -111,6 +112,9 @@ getset:
     SET BEGIN assignment* END GET returnfunc
 ;
 
+operation_symbols:
+    PLUS | MINUS | MULTIPICATION | DEVIDE   
+;
 
 KEYWORD :
             'int'|'bool'
@@ -136,9 +140,13 @@ DO:'do';
 //
 ASSIGNMENT :'=';
 SEMICOLON:';';
-OPERATOR :
-            '+' | '-' | '*' | '/'
-;
+PLUS:'+';
+MINUS:'-';
+MULTIPICATION:'*';
+DEVIDE:'/';
+//OPERATOR :
+  //          '+' | '-' | '*' | '/'
+//;
 
 //RELATION :
  //         '<'
