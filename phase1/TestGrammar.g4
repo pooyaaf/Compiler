@@ -58,7 +58,7 @@ built_in_summerized:
 ;
 
 assignment:
-    KEYWORD ID ASSIGNMENT ((INTVAL | BOOLEANVAL | ID)',')* SEMICOLON?
+    KEYWORD ID (ASSIGNMENT (INTVAL | BOOLEANVAL | ID | expr | function_call))? SEMICOLON?
     |ID (ASSIGNMENT (INTVAL | BOOLEANVAL | ID | expr | function_call))? SEMICOLON?
     |fptr_call ID (ASSIGNMENT expr)? SEMICOLON?
     |list_declare (((KEYWORD | FPTR) ID) | struct_declation) (ASSIGNMENT (INTVAL | BOOLEANVAL | ID | expr | function_call))? SEMICOLON?
