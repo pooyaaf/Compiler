@@ -1,5 +1,5 @@
 grammar TestGrammar;
-cmm:( struct* | function*) main EOF;
+cmm:( struct | function)* main EOF;
 
 expr:
     (term + expr | term)
