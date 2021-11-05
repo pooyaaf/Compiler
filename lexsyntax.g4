@@ -22,12 +22,12 @@ main:
 ;
 
 begin_struct :
-    BEGIN   (function | assignment | function_call | built_in )*  END
+    BEGIN   (assignment | function  | function_call | built_in )*  END
 ;
 
 
 body:
-    (built_in | assignment | ifstatement | whileloop | dostatement | function_call | returnfunc)*
+    (built_in | assignment | ifstatement | whileloop | dostatement | function_call | returnfunc | getset)*
 ;
 
 
@@ -35,8 +35,12 @@ begin:
     BEGIN body END
 ;
 
+dot_id:
+    ID ('.'ID)+
+;
+
 returnfunc:
-    RETURN (INTVAL | BOOLEANVAL | (ID'.'ID) | ID |expr)
+    RETURN (list_declare | BOOLEANVAL | dot_id | ID |expr | INTVAL)
 ;
 
 
@@ -53,6 +57,7 @@ assignment:
     |list_declare (((KEYWORD | FPTR) ID) | struct_declation)
     |struct_declation
     |KEYWORD (ID(','ID)*|ID)
+    |KEYWORD ID SEMICOLON?
 ;
 
 struct_declation:
@@ -99,6 +104,11 @@ relation:
 
 relation_symbols:
     SMALLER | BIGGER | EQBIGGER | EQSMAALLER | EQUAL | NEQUAL
+;
+
+
+getset:
+    SET BEGIN assignment* END GET returnfunc
 ;
 
 
