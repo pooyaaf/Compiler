@@ -1,109 +1,129 @@
 grammar TestGrammar;
-/*parser | CFG */
-cmm:( struct* | function* ) main +EOF;
+cmm:struct* function* main EOF;
 
-//--- expr ---
-expr
-        :
-        term + expr | term
-        ;
+expr:
+    (term + expr | term)
+;
 
-term
-        :
-        (ID|INTVAL) OPERATOR term | LPAR expr RPAR OPERATOR term | LPAR expr RPAR | ID | INTVAL
-        ;
-//Functions & Main:
+term:
+    (ID|INTVAL) operation_symbols term | LPAR expr RPAR operation_symbols term | LPAR (MINUS)?expr RPAR | ID | INTVAL
+;
+
+struct:
+    STRUCT ID (begin_struct | (function | assignment | function_call | built_in )* )
+;
+
+function:
+    ((LIST SHARP)* KEYWORD | KEYWORD | VOID | fptr_call) ID LPAR ( parameters? (',' parameters)*) RPAR (begin|body)
+;
 
 main:
-    MAIN LPAR RPAR (begin|statement)
+    MAIN LPAR RPAR (begin|body)
 ;
-function:
-    LIST SHARP KEYWORD ID LPAR ( parameters? (',' parameters)*) RPAR (return_begin|return_statement)
-    | KEYWORD ID LPAR ( parameters? (',' parameters)*) RPAR (return_begin|return_statement)
-    | VOID ID LPAR ( parameters? (',' parameters)*) RPAR (begin|statement)
+
+begin_struct :
+    BEGIN   (assignment | function  | function_call | built_in )*  END
 ;
+
+
 body:
-    statement
+    (built_in | assignment | ifstatement | elsestatement | whileloop | dostatement | function_call | returnfunc | fptr_call)* getset?
+    (built_in | assignment | ifstatement | elsestatement | whileloop | dostatement | function_call | returnfunc | fptr_call)*
 ;
-parameters :
-    STRUCT ID ID
+
+
+begin:
+    BEGIN body END
+;
+
+dot_id:
+    ID ('.'ID)+
+;
+
+returnfunc:
+    RETURN (list_declare | BOOLEANVAL | dot_id | ID |expr | INTVAL) SEMICOLON?
+;
+
+
+built_in:
+    DISPLAY LPAR (SIZE | APPEND)? ((expr | BOOLEANVAL | ID(DOT ID)* | list_declare(ID))(','(expr | BOOLEANVAL | ID))* ) RPAR SEMICOLON?
+    |SIZE  LPAR ID(DOT ID)* RPAR SEMICOLON?
+    |APPEND LPAR ( recursive_in_list? | ID  ) COMMA (built_in_summerized) RPAR SEMICOLON?
+;
+recursive_in_list :
+         recursive_in_list (ID|expr) LSQUBRACE (built_in_summerized)(COMMA (built_in_summerized| LSQUBRACE built_in_summerized?(COMMA built_in_summerized)* RSQUBRACE))* RSQUBRACE   | (ID|expr) LSQUBRACE (built_in_summerized)(COMMA (built_in_summerized| LSQUBRACE built_in_summerized?(COMMA built_in_summerized)* RSQUBRACE))* RSQUBRACE
+;
+built_in_summerized:
+    (expr| INTVAL | BOOLEANVAL | ID(DOT ID)* | list_declare)*
+;
+
+assignment:
+    KEYWORD ID ASSIGNMENT ((INTVAL | BOOLEANVAL | ID)',')* SEMICOLON?
+    |ID (ASSIGNMENT (INTVAL | BOOLEANVAL | ID | expr | function_call))? SEMICOLON?
+    |fptr_call ID (ASSIGNMENT expr)? SEMICOLON?
+    |list_declare (((KEYWORD | FPTR) ID) | struct_declation) (ASSIGNMENT (INTVAL | BOOLEANVAL | ID | expr | function_call))? SEMICOLON?
+    |struct_declation
+    |KEYWORD (ID(','ID)*|ID) SEMICOLON?
+    |KEYWORD ID SEMICOLON?
+    |dot_id (ASSIGNMENT expr)?  SEMICOLON?
+;
+
+struct_declation:
+    STRUCT ID ID (',' ID)*
+;
+
+ifstatement:
+    IF NOT? LPAR? (relation | BOOLEANVAL | expr) RPAR? (begin | body)
+;
+elsestatement :
+        ELSE ( begin | body)
+;
+whileloop:
+    WHILE NOT? LPAR? (relation | BOOLEANVAL | expr) RPAR? (begin | body)
+;
+
+dostatement
+        :
+        DO (begin | body) WHILE LPAR? (relation | BOOLEANVAL | expr) RPAR?
+;
+
+function_call:
+    ID LPAR (BOOLEANVAL | INTVAL | ID | expr )? (','(BOOLEANVAL | INTVAL | ID | expr ))*   RPAR SEMICOLON?
+;
+
+parameters:
+    expr
+    | STRUCT ID ID
     | list_declare KEYWORD ID
     | KEYWORD ID
 ;
+
+
+fptr_call :
+    FPTR '<' (KEYWORD|STRUCT|list_declare (ID)?)?(','KEYWORD|','STRUCT|','list_declare)* '-''>' (KEYWORD|STRUCT|list_declare* (KEYWORD | ID ))  '>'
+;
+
+
 list_declare:
     list_declare LIST SHARP |LIST SHARP
 ;
-//struct Declaring:
-// should be worked on
-struct:
-    STRUCT ID begin?
-;
-//
-return_begin :
- BEGIN statement*  RETURN (INTVAL | BOOLEANVAL |  (ID'.'ID) | ID | expr) (SEMICOLON)? END
-;
-//
-begin :
-     BEGIN (statement* | (if else)* )  END
-;
-statement: (assignment | built_in | if | while | do | function_call) (SEMICOLON)?;
-// -- if - while - do -- function-call
-function_call :
-    ID LPAR (BOOLEANVAL*|INTVAL*|ID*) RPAR SEMICOLON?
-;
-while
-        :
-        WHILE '~'? LPAR (relation|BOOLEANVAL) RPAR begin? statement
-        ;
-do
-        :
-        DO (begin)? WHILE LPAR relation RPAR
-        ;
-if
-        :
-        IF LPAR? (relation|BOOLEANVAL) RPAR? (begin)?
-        |IF LPAR? (relation|BOOLEANVAL) RPAR? statement
-        | IF LPAR? (relation|BOOLEANVAL) RPAR? return_statement
-        ;
-else :
-        ELSE begin
-        | ELSE statement
-        | ELSE return_statement
-;
-relation
-        :
-        expr RELATION expr
-        ;
 
-//assignment
-return_statement:
-    RETURN (INTVAL | BOOLEANVAL | (ID'.'ID) | ID |expr) (SEMICOLON)?
-   ;
-
-
-// should be worked on
-built_in :
-        DISPLAY (LPAR ID)? LPAR(INTVAL | BOOLEANVAL | ID)?(','INTVAL | ','BOOLEANVAL | ','ID)* RPAR? RPAR
-    |   SIZE  LPAR (INTVAL | BOOLEANVAL | ID) RPAR
-    | APPEND LPAR (INTVAL | BOOLEANVAL | ID) COMMA (INTVAL | BOOLEANVAL | ID) RPAR
+relation:
+    expr relation_symbols expr
 ;
-//fptr < type -> type > ID
-fptr_call :
-    FPTR '<' (KEYWORD|STRUCT|list_declare)?(','KEYWORD|','STRUCT|','list_declare)* '-''>' (KEYWORD|STRUCT|LIST)  '>' ID
-;
-//--assignment
-assignment :
-  KEYWORD ID ASSIGNMENT (INTVAL | BOOLEANVAL | ID) (',' ID)*
-| ID ASSIGNMENT (INTVAL | BOOLEANVAL | ID | expr )
-| fptr_call (ASSIGNMENT ID)?
-| list_declare KEYWORD ID
-| STRUCT ID ID
-| ID ASSIGNMENT (INTVAL | BOOLEANVAL | ID | expr )
-| KEYWORD (ID(','ID)*|ID)
+
+relation_symbols:
+    SMALLER | BIGGER | EQBIGGER | EQSMAALLER | EQUAL | NEQUAL
 ;
 
 
-/* lexical | Tokens */
+getset:
+    SET BEGIN assignment* END GET returnfunc
+;
+
+operation_symbols:
+    PLUS | MINUS | MULTIPICATION | DEVIDE
+;
 
 KEYWORD :
             'int'|'bool'
@@ -129,11 +149,28 @@ DO:'do';
 //
 ASSIGNMENT :'=';
 SEMICOLON:';';
-OPERATOR :
-            '+' | '-' | '*' | '/'
-;
-RELATION :
-          '&' | '|' | '~' | '==' | '!=' | '>' | '<'
+PLUS:'+';
+MINUS:'-';
+MULTIPICATION:'*';
+DEVIDE:'/';
+DOT:'.';
+//OPERATOR :
+  //          '+' | '-' | '*' | '/'
+//;
+
+//RELATION :
+ //         '<'
+//;
+BIGGER: '>';
+SMALLER: '<';
+EQBIGGER: '>=';
+EQSMAALLER: '<=';
+EQUAL: '==';
+NEQUAL: '!=';
+
+
+NOT:
+'~'
 ;
 COMMA :
 ','
@@ -162,6 +199,8 @@ BlockComment
         -> skip
     ;
 WS : [ \t\r\n] -> skip;
+//NLINE : '\n';
+
 JUNK : [@$`] -> skip;
 
 //prog:(statement)+EOF;
@@ -174,4 +213,3 @@ JUNK : [@$`] -> skip;
 //INTVAL:'0'|[1-9][0-9]+;
 //BOOLEANVAL:'true'|'false';
 //ID:[a-zA-Z_][A-Za-z0-9_]*;
-//WS:[ \t\r\n]->skip ;
