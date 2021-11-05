@@ -6,7 +6,7 @@ expr:
 ;
 
 term:
-    (ID|INTVAL) operation_symbols term | LPAR expr RPAR operation_symbols term | LPAR (MINUS)?expr RPAR | ID | INTVAL
+    (ID|INTVAL) operation_symbols term | LPAR expr RPAR operation_symbols term | LPAR (MINUS)?expr RPAR | ID | INTVAL |function_call
 ;
 
 struct:
@@ -41,7 +41,7 @@ dot_id:
 ;
 
 returnfunc:
-    RETURN (list_declare | BOOLEANVAL | dot_id | ID |expr | INTVAL) SEMICOLON?
+    RETURN ((MINUS)?built_in|list_declare | BOOLEANVAL | dot_id | ID |expr | INTVAL) SEMICOLON?
 ;
 
 
@@ -54,11 +54,11 @@ recursive_in_list :
          recursive_in_list (ID|expr) LSQUBRACE (built_in_summerized)(COMMA (built_in_summerized| LSQUBRACE built_in_summerized?(COMMA built_in_summerized)* RSQUBRACE))* RSQUBRACE   | (ID|expr) LSQUBRACE (built_in_summerized)(COMMA (built_in_summerized| LSQUBRACE built_in_summerized?(COMMA built_in_summerized)* RSQUBRACE))* RSQUBRACE
 ;
 built_in_summerized:
-    (expr| INTVAL | BOOLEANVAL | ID(DOT ID)* | list_declare)*
+    (expr | INTVAL | BOOLEANVAL | ID(DOT ID)* | list_declare )*
 ;
 
 assignment:
-    KEYWORD ID (ASSIGNMENT (INTVAL | BOOLEANVAL | ID | expr | function_call))? SEMICOLON?
+    KEYWORD ID (',' assignment)? (ASSIGNMENT (INTVAL | BOOLEANVAL | ID | expr | function_call))? SEMICOLON?
     |ID (ASSIGNMENT (INTVAL | BOOLEANVAL | ID | expr | function_call))? SEMICOLON?
     |fptr_call ID (ASSIGNMENT expr)? SEMICOLON?
     |list_declare (((KEYWORD | FPTR) ID) | struct_declation) (ASSIGNMENT (INTVAL | BOOLEANVAL | ID | expr | function_call))? SEMICOLON?
@@ -94,13 +94,13 @@ function_call:
 parameters:
     expr
     | STRUCT ID ID
-    | list_declare KEYWORD ID
+    | list_declare (STRUCT ID ID|KEYWORD ID)
     | KEYWORD ID
 ;
 
 
 fptr_call :
-    FPTR '<' (KEYWORD|STRUCT|list_declare (ID)?)?(','KEYWORD|','STRUCT|','list_declare)* '-''>' (KEYWORD|STRUCT|list_declare* (KEYWORD | ID ))  '>'
+    FPTR '<' (VOID|KEYWORD|STRUCT|list_declare (ID)?)?(','VOID|','KEYWORD|','STRUCT|','list_declare)* '-''>' (VOID|KEYWORD|STRUCT|list_declare* (KEYWORD | ID ))?(VOID|KEYWORD|STRUCT|list_declare* (KEYWORD | ID ))*  '>'
 ;
 
 
@@ -113,7 +113,7 @@ relation:
 ;
 
 relation_symbols:
-    SMALLER | BIGGER | EQBIGGER | EQSMAALLER | EQUAL | NEQUAL
+    OPERATOR | SMALLER | BIGGER | EQBIGGER | EQSMAALLER | EQUAL | NEQUAL |
 ;
 
 
@@ -154,6 +154,7 @@ MINUS:'-';
 MULTIPICATION:'*';
 DEVIDE:'/';
 DOT:'.';
+OPERATOR: '&&' | '||'|'&' | '|'  ;
 //OPERATOR :
   //          '+' | '-' | '*' | '/'
 //;
