@@ -3,11 +3,11 @@ cmm:NLINE* struct* NLINE* function* NLINE* main NLINE* EOF;
 
 
 expr:
-    (term (PLUS | MINUS) expr | term)
+   ((term MINUS  expr {System.out.println("Operator : -");} | term) | (term PLUS  expr {System.out.println("Operator : +");} | term))
 ;
 
 term:
-    (ID|INTVAL) (DEVIDE | MULTIPICATION) term | LPAR expr RPAR (DEVIDE | MULTIPICATION) term | LPAR (MINUS)?expr RPAR | MINUS? sizefunc |  ID | INTVAL |func_expr
+     term(DEVIDE{System.out.println("Operator : /");} | MULTIPICATION{System.out.println("Operator : *");})(ID|INTVAL)  | term (DEVIDE {System.out.println("Operator : /");}| MULTIPICATION{System.out.println("Operator : *");})LPAR expr RPAR  | LPAR (MINUS {System.out.println("Operator : -");})?expr RPAR | (MINUS {System.out.println("Operator : -");})? sizefunc |  ID | INTVAL |func_expr
 ;
 
 struct:
@@ -62,7 +62,7 @@ dot_id:
 ;
 
 returnfunc:
-    RETURN {System.out.println("Return");}((MINUS)? built_in | list_declare | BOOLEANVAL |expr | dot_id | ID  | INTVAL) ((SEMICOLON | NLINE+) |SEMICOLON NLINE+)
+    RETURN {System.out.println("Return");}((MINUS {System.out.println("Operator : -");})? built_in | list_declare | BOOLEANVAL |expr | dot_id | ID  | INTVAL) ((SEMICOLON | NLINE+) |SEMICOLON NLINE+)
 ;
 
 
@@ -80,7 +80,7 @@ sizefunc:
 
 
 appendfunc:
-    APPEND LPAR ( recursive_in_list? | ID  ) COMMA (built_in_summerized) RPAR (ID (','ID)* | BOOLEANVAL | expr | list_declare | INTVAL | LSQUBRACE | RSQUBRACE)* ((SEMICOLON | NLINE+) |SEMICOLON NLINE+) {System.out.println("Append");}
+    APPEND {System.out.println("Append");} LPAR ( recursive_in_list? | ID  ) COMMA (built_in_summerized) RPAR (ID (','ID)* | BOOLEANVAL | expr | list_declare | INTVAL | LSQUBRACE | RSQUBRACE)* ((SEMICOLON | NLINE+) |SEMICOLON NLINE+)
 ;
 
 recursive_in_list :
@@ -92,7 +92,7 @@ built_in_summerized:
 
 assignment:
         KEYWORD ID{System.out.println("VarDec : "+$ID.text);} (ASSIGNMENT (INTVAL | BOOLEANVAL | ID | expr | function_call | lparrpar))? (','ID {System.out.println("VarDec : "+$ID.text);}(ASSIGNMENT (INTVAL | BOOLEANVAL | ID | expr | function_call | lparrpar))?)* ((SEMICOLON | NLINE+) |SEMICOLON NLINE+)
-       |ID ((LSQUBRACE (expr| ID | INTVAL) RSQUBRACE)*)? (ASSIGNMENT (INTVAL | BOOLEANVAL |MINUS? ID ((LSQUBRACE (expr| ID | INTVAL) RSQUBRACE)*)? | expr | function_call | lparrpar))? ((SEMICOLON | NLINE+) |SEMICOLON NLINE+)
+       |ID ((LSQUBRACE (expr| ID | INTVAL) RSQUBRACE)*)? (ASSIGNMENT (INTVAL | BOOLEANVAL |(MINUS {System.out.println("Operator : -");})? ID ((LSQUBRACE (expr| ID | INTVAL) RSQUBRACE)*)? | expr | function_call | lparrpar))? ((SEMICOLON | NLINE+) |SEMICOLON NLINE+)
        |fptr_func ID {System.out.println("VarDec : "+$ID.text);} (ASSIGNMENT expr)? ((SEMICOLON | NLINE+)| SEMICOLON NLINE+)
        |list_declare (((KEYWORD | FPTR) ID{System.out.println("VarDec : "+$ID.text);}) | STRUCT ID ID{System.out.println("VarDec : "+$ID.text);} (',' ID{System.out.println("VarDec : "+$ID.text);})*) (ASSIGNMENT (INTVAL | BOOLEANVAL | ID | expr | function_call | lparrpar))? ((SEMICOLON | NLINE+)| SEMICOLON NLINE+)
        |struct_declation
@@ -113,18 +113,18 @@ condition_assignment:
 ;
 
 ifstatement:
-    IF {System.out.println("Conditional : if");} NOT? LPAR? (relation (and_or relation)* | BOOLEANVAL | expr | condition_assignment ) RPAR? (begin | NLINE+ (built_in | ifstatement (elsestatement)?  | whileloop | dostatement | function_call | returnfunc | fptr_call | assignment))
+    IF {System.out.println("Conditional : if");} (NOT{System.out.println("Operator : ~");})? LPAR? (relation (r=and_or relation{System.out.println("Operator : "+$r.text);})* | BOOLEANVAL | expr | condition_assignment ) RPAR? (begin | NLINE+ (built_in | ifstatement (elsestatement)?  | whileloop | dostatement | function_call | returnfunc | fptr_call | assignment))
 ;
 elsestatement :
         ELSE {System.out.println("Conditional : else");}(begin | NLINE + (built_in |ifstatement (elsestatement)? | whileloop | dostatement | function_call | returnfunc | fptr_call | assignment))
 ;
 whileloop:
-    WHILE {System.out.println("Loop : while");}NOT? LPAR? (relation (and_or relation)* | BOOLEANVAL | expr | condition_assignment) RPAR? (begin | body)
+    WHILE {System.out.println("Loop : while");} (NOT{System.out.println("Operator : ~");})? LPAR? (relation (r=and_or relation{System.out.println("Operator : "+$r.text);})* | BOOLEANVAL | expr | condition_assignment) RPAR? (begin | body)
 ;
 
 dostatement
         :
-        DO {System.out.println("Loop : do...while");}(do_begin |  NLINE + (built_in |ifstatement (elsestatement)? | whileloop | dostatement | function_call | returnfunc | fptr_call | assignment)) WHILE NOT? LPAR? (relation (and_or relation)* | BOOLEANVAL | expr | condition_assignment) RPAR? ((SEMICOLON | NLINE+) | SEMICOLON NLINE+)
+        DO {System.out.println("Loop : do...while");}(do_begin |  NLINE + (built_in |ifstatement (elsestatement)? | whileloop | dostatement | function_call | returnfunc | fptr_call | assignment)) WHILE (NOT{System.out.println("Operator : ~");})? LPAR? (relation (r=and_or relation{System.out.println("Operator : "+$r.text);})* | BOOLEANVAL | expr | condition_assignment) RPAR? ((SEMICOLON | NLINE+) | SEMICOLON NLINE+)
 ;
 
 function_call:
@@ -162,7 +162,7 @@ list_prime:
 ;
 
 relation:
-     LPAR? expr relation_symbols expr RPAR?
+     LPAR? expr l=relation_symbols expr {System.out.println("Operator : "+$l.text);}RPAR?
 ;
 
 relation_symbols:
