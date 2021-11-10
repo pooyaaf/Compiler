@@ -1,4 +1,4 @@
-grammar Test;
+grammar Testnew;
 
 cmm:NLINE* struct* NLINE* function* NLINE* main NLINE* EOF;
 
@@ -14,6 +14,7 @@ function:
 func_body:
     main_body | return_func
 ;
+
 func_begin:
     BEGIN NLINE+ func_body* END NLINE+
 ;
@@ -24,7 +25,7 @@ main:
 ;
 //main return?
 main_body:
-    (ifstatement elsestatement?) | whileloop | statement | dostatement
+    ((ifstatement elsestatement?) | whileloop | statement | dostatement )
 ;
 
 main_begin:
@@ -32,7 +33,7 @@ main_begin:
 ;
 
 struct_body:
-    (function_in_struct | statement | setget)
+    (function_in_struct | statement | setget )
 ;
 
 struct_begin :
@@ -42,41 +43,41 @@ struct_begin :
 function_in_struct:
     (list_star? (KEYWORD | fptr_func | ID ) | VOID) ID
     {System.out.println("VarDec : " + $ID.text);}
-    LPAR argument_in_func_dec RPAR BEGIN NLINE+ (setget|func_body)*  END nlinesemi
+    LPAR argument_in_func_dec RPAR BEGIN NLINE+ ((setget|func_body)  )*  END  nlinesemi
 ;
 
 statement:
-    display | assignment | vardec | function_call_in_statement |expr
+    (display | assignment | vardec | function_call_in_statement |expr)  nlinesemi
 ;
 
 vardec:
     (list_star? (KEYWORD | fptr_func | STRUCT ID )) (ID {System.out.println("VarDec : " + $ID.text);} ('=' expr)?)
-    (','ID {System.out.println("VarDec : " + $ID.text);} ('=' expr)?)* nlinesemi
+    (','ID {System.out.println("VarDec : " + $ID.text);} ('=' expr)?)*
 ;
 
 assignment:
-    expr '=' LPAR? expr (','expr)* RPAR? nlinesemi
+    expr '=' LPAR? expr (','expr)* RPAR?
 
 ;
 
 ifstatement:
-    IF {System.out.println("Conditional : if");} LPAR? expr RPAR?  (begin_state_for_conditions nlinesemi|NLINE+ func_body )
+    IF {System.out.println("Conditional : if");} LPAR? expr RPAR?  (begin_state_for_conditions |NLINE+ func_body)
 ;
 
 elsestatement:
-    ELSE {System.out.println("Conditional : else");} (begin_state_for_conditions nlinesemi|NLINE+ func_body)
+    ELSE {System.out.println("Conditional : else");} (begin_state_for_conditions|NLINE+ func_body)
 ;
 
 whileloop:
-    WHILE {System.out.println("Loop : while");} LPAR? expr RPAR? (begin_state_for_conditions nlinesemi|NLINE+ func_body)
+    WHILE {System.out.println("Loop : while");} LPAR? expr RPAR? (begin_state_for_conditions  |NLINE+ func_body)
 ;
 
 dostatement:
-    DO {System.out.println("Loop : do...while");} (begin_state_for_conditions |NLINE+ func_body) WHILE LPAR? expr RPAR?  nlinesemi
+    DO {System.out.println("Loop : do...while");} (begin_state_for_conditions |NLINE+ func_body) WHILE LPAR? expr RPAR? nlinesemi
 ;
 
 begin_state_for_conditions:
-    BEGIN NLINE+ func_body* END
+    BEGIN NLINE+ func_body* END nlinesemi
 ;
 
 
@@ -114,11 +115,11 @@ ineqExpr:
     |tilda
 ;
 
-tilda: append appendex | appendex
+tilda:  appendex append  | append | appendex
 ;
 
 appendex:
-     size sizeex| sizeex
+      sizeex r=MINUS?  size { System.out.println("Operator : "+$r.text); }| r=MINUS?  size { System.out.println("Operator : "+$r.text); } | sizeex
 ;
 
 
@@ -142,7 +143,7 @@ fptr_func:
 ;
 
 display:
-    DISPLAY {System.out.println("Built-in : display");} LPAR expr RPAR nlinesemi
+    DISPLAY {System.out.println("Built-in : display");} LPAR expr RPAR
 ;
 
 append:
@@ -150,21 +151,20 @@ append:
 ;
 
 size:
-    SIZE { System.out.println("Size"); } LPAR expr RPAR
+    SIZE {System.out.println("Size"); } LPAR expr RPAR
 ;
 setget:
-    SET {System.out.println("Setter");}BEGIN NLINE+ statement* END nlinesemi
-    GET {System.out.println("Getter");}NLINE+ return_func
+    SET {System.out.println("Setter");}BEGIN? NLINE+ statement* (END nlinesemi)?
+    GET BEGIN? {System.out.println("Getter");}NLINE+ return_func (END nlinesemi)?
 ;
 
 function_call_in_statement:
-    ID LPAR argument_in_func_call RPAR {System.out.println("FunctionCall");}(LPAR argument_in_func_call RPAR)* nlinesemi
+    ID LPAR argument_in_func_call RPAR {System.out.println("FunctionCall");}(LPAR argument_in_func_call RPAR)*
 ;
 
 argument_in_func_call:
     expr? (','expr)*
 ;
-
 
 argument_in_func_dec:
      types_of_arg_dec (','types_of_arg_dec)*
@@ -172,8 +172,8 @@ argument_in_func_dec:
 ;
 
 return_func:
-    RETURN { System.out.println("Return"); } expr nlinesemi
-    |RETURN { System.out.println("Return"); } nlinesemi
+    RETURN { System.out.println("Return"); } expr (LSQUBRACE (INTVAL | BOOLEANVAL | ID) RSQUBRACE)* nlinesemi
+    |RETURN { System.out.println("Return"); } (LSQUBRACE (INTVAL | BOOLEANVAL | ID) RSQUBRACE)* nlinesemi
 ;
 
 types_of_return:
