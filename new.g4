@@ -1,4 +1,5 @@
 grammar Test;
+
 cmm:NLINE* struct* NLINE* function* NLINE* main NLINE* EOF;
 
 struct:
@@ -41,11 +42,11 @@ struct_begin :
 function_in_struct:
     (list_star? (KEYWORD | fptr_func | ID ) | VOID) ID
     {System.out.println("VarDec : " + $ID.text);}
-    LPAR argument_in_func_dec RPAR BEGIN NLINE+ setget END nlinesemi
+    LPAR argument_in_func_dec RPAR BEGIN NLINE+ (setget|func_body)*  END nlinesemi
 ;
 
 statement:
-    display | assignment | vardec | function_call_in_statement | expr
+    display | assignment | vardec | function_call_in_statement |expr
 ;
 
 vardec:
@@ -54,11 +55,12 @@ vardec:
 ;
 
 assignment:
-    expr '=' expr nlinesemi
+    expr '=' LPAR? expr (','expr)* RPAR? nlinesemi
+
 ;
 
 ifstatement:
-    IF {System.out.println("Conditional : if");} expr (begin_state_for_conditions nlinesemi|NLINE+ func_body )
+    IF {System.out.println("Conditional : if");} LPAR? expr RPAR?  (begin_state_for_conditions nlinesemi|NLINE+ func_body )
 ;
 
 elsestatement:
@@ -66,11 +68,11 @@ elsestatement:
 ;
 
 whileloop:
-    WHILE {System.out.println("Loop : while");} expr (begin_state_for_conditions nlinesemi|NLINE+ func_body)
+    WHILE {System.out.println("Loop : while");} LPAR? expr RPAR? (begin_state_for_conditions nlinesemi|NLINE+ func_body)
 ;
 
 dostatement:
-    DO {System.out.println("Loop : do...while");} (begin_state_for_conditions |NLINE+ func_body) WHILE expr nlinesemi
+    DO {System.out.println("Loop : do...while");} (begin_state_for_conditions |NLINE+ func_body) WHILE LPAR? expr RPAR?  nlinesemi
 ;
 
 begin_state_for_conditions:
@@ -116,7 +118,7 @@ tilda: append appendex | appendex
 ;
 
 appendex:
-    sizeex size | sizeex
+     size sizeex| sizeex
 ;
 
 
@@ -128,6 +130,7 @@ sizeex:
 
 types: LPAR expr RPAR | (MINUS { System.out.println("Operator : -"); })? function_call_in_expr |
     KEYWORD | (MINUS{ System.out.println("Operator : -"); })?(INTVAL | dot_id | BOOLEANVAL)| (LSQUBRACE expr (','expr)* RSQUBRACE | LSQUBRACE RSQUBRACE)
+
 ;
 
 function_call_in_expr:
