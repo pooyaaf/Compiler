@@ -37,7 +37,12 @@ main returns[MainDeclaration mainRet]:
 
 //todo
 structDeclaration returns[StructDeclaration structDeclarationRet]:
-    STRUCT identifier ((BEGIN structBody NEWLINE+ END) | (NEWLINE+ singleStatementStructBody SEMICOLON?)) NEWLINE+;
+    s = STRUCT id = identifier
+    {
+         $structDeclarationRet = new StructDeclaration() ;
+         $structDeclarationRet.setLine($s.getLine());
+    }
+     ((BEGIN structBody NEWLINE+ END) | (NEWLINE+ singleStatementStructBody SEMICOLON?)) NEWLINE+;
 
 //todo
 singleVarWithGetAndSet :
@@ -129,7 +134,7 @@ singleStatement :
     | varDecStatement | loopStatement | append | size;
 
 //todo
-expression:
+expression returns[Expression exprRet]:
     orExpression (op = ASSIGN expression )? ;
 
 //todo
@@ -161,21 +166,36 @@ preUnaryExpression:
     ((op = NOT | op = MINUS) preUnaryExpression ) | accessExpression;
 
 //todo
-accessExpression:
-    otherExpression ((LPAR functionArguments RPAR) | (DOT identifier))*  ((LBRACK expression RBRACK) | (DOT identifier))*;
+accessExpression returns[Expression accessExprRet]:
+    o = otherExpression  { $accessExprRet = $o.otherExprRet; } ((LPAR e = functionArguments RPAR) | (DOT identifier))*  ((LBRACK expression RBRACK) | (DOT identifier))*;
 
 //todo
-otherExpression:
-    value | identifier | LPAR (functionArguments) RPAR | size | append ;
+otherExpression returns [Expression otherExprRet]:
+    v = value
+    { $otherExprRet = $v.valueRet; }
+    | id = identifier { $otherExprRet = $id.idRet; }
+    | LPAR (functionArguments) RPAR
+    | s = size { $otherExprRet = $s.sizeRet; }
+    | a = append { $otherExprRet = $a.appendRet; };
 
 //todo
-size :
-    SIZE LPAR expression RPAR;
-
+size returns[ListSize sizeRet]:
+    s = SIZE LPAR e1 = expression RPAR
+    {
+        $sizeRet = new ListSize($e1.exprRet);
+        $sizeRet.setLine($s.getLine());
+    }
+    ;
 //todo
-append :
-    APPEND LPAR expression COMMA expression RPAR;
+append returns[ListAppend appendRet]:
+    a = APPEND
 
+    LPAR e1 = expression COMMA e2 = expression RPAR
+    {
+        $appendRet = new ListAppend($e1.exprRet , $e2.exprRet);
+        $appendRet.setLine($a.getLine());
+    }
+    ;
 //todo
 value returns[Value valueRet]:
     b = boolValue
@@ -243,7 +263,7 @@ fptrType returns[FptrType fptrTypeRet]:
      { $fptrTypeRet = new FptrType(); }
      LESS_THAN (VOID { $fptrTypeRet.setArgsType((new ArrayList<Type>()); }
      |
-     (types=type (COMMA type)* {$fptrTypeRet.setArgsType($types.typeRet); }))
+     (types = type {$fptrTypeRet.setArgsType($types.typeRet); } (COMMA types = type {$fptrTypeRet.setArgsType($types.typeRet); })* ))
       ARROW (t = type{ $fptrTypeRet.setReturnType($t.typeRet); } | VOID{ $fptrTypeRet.setReturnType(new VoidType()); }) GREATER_THAN;
 
 MAIN: 'main';
