@@ -73,97 +73,146 @@ functionArgsDec :
     LPAR (type identifier (COMMA type identifier)*)? RPAR ;
 
 //todo
-functionArguments :
+functionArguments returns[ExprInPar funcArgRet]:
     (expression (COMMA expression)*)?;
 
 //todo
-body :
+body returns[Statement bodyRet]:
      (blockStatement | (NEWLINE+ singleStatement (SEMICOLON)?));
 
 //todo
-loopCondBody :
+loopCondBody returns[Statement loopconRet]:
      (blockStatement | (NEWLINE+ singleStatement ));
 
 //todo
-blockStatement :
+blockStatement returns[]:
     BEGIN (NEWLINE+ (singleStatement SEMICOLON)* singleStatement (SEMICOLON)?)+ NEWLINE+ END;
 
 //todo
-varDecStatement :
-    type identifier (ASSIGN orExpression )? (COMMA identifier (ASSIGN orExpression)? )*;
+varDecStatement returns[VarDecStmt varDecRet]:
+    {$varDecRet = new VarDecStmt();}
+    t = type i1 = identifier
+    {VariableDeclaration myVar = new VariableDeclaration($i1.idRet , $t.typeRet); $varDecRet.setLine(i1.getLine());}
+    (ASSIGN o1 = orExpression
+    {myVar.setDefaultValue($o1.orExprRet);
+    $varDecRet.addVar(myVar);})?
+    (COMMA identifier {VariableDeclaration myVar = new VariableDeclaration($i1.idRet , $t.typeRet);}(ASSIGN o2 = orExpression
+    {myVar.setDefaultValue($o2.orExprRet);
+    $varDecRet.addVar(myVar);}
+    )?)*
+
+    ;
 
 //todo
-functionCallStmt :
-     otherExpression ((LPAR functionArguments RPAR) | (DOT identifier))* (LPAR functionArguments RPAR);
+functionCallStmt returns[FunctionCallStmt funcCallStmtRet]:
+     o = otherExpression ((l = LPAR
+     {$funcCallStmtRet = new FunctionCallStmt($o.otherExprRet);
+                 $funcCallStmtRet.setLine($l.getLine());}
+     f1 = functionArguments RPAR) {$funcCallStmtRet.addArg($f1.funcArgRet);}
+     | (DOT i = identifier {$funcCallStmtRet.addArg($i.idRet);}))* (l = LPAR f2 = functionArguments {$funcCallStmtRet.addArg($f2.funcArgRet);}RPAR)
+      {$funcCallStmtRet.setArgs($funcCallStmtRet.getArgs());};
 
 //todo
-returnStatement :
-    RETURN (expression)?;
+returnStatement returns[ReturnStmt returnStmtRet]:
+    r = RETURN {$returnStmtRet = new ReturnStmt(); $returnStmtRet.setLine(r.getLine());}(e = expression {$returnStmtRet.setReturnedExpr($e.exprRet);})?
+    ;
 
 //todo
-ifStatement :
-    IF expression (loopCondBody | body elseStatement);
+ifStatement returns[ConditionalStmt ifRet]:
+    if1 = IF
+    e1 = expression {$ifRet = new ConditionalStmt($e1.exprRet); $ifRet.setLine($if1.getline());}
+    (l = loopCondBody {$ifRet.setThenBody($l.loopconRet);}
+    | b = body {$ifRet.setThenBody($b.bodyRet);}
+    e2 = elseStatement {$ifRet.setElseBody($e2.elseRet);});
 
 //todo
-elseStatement :
-     NEWLINE* ELSE loopCondBody;
+elseStatement returns[Statement elseRet]:
+     NEWLINE* ELSE l = loopCondBody {$elseRet = $l.loopconRet;}
+     ;
 
 //todo
-loopStatement :
-    whileLoopStatement | doWhileLoopStatement;
+loopStatement returns[LoopStmt loopStmtRet]:
+    w = whileLoopStatement {$loopStmtRet = new LoopStmt(); $loopStmtRet.setLine(w.getLine());}
+    | d = doWhileLoopStatement {$loopStmtRet = new LoopStmt(); $loopStmtRet.setLine(d.getLine());}
+;
+//todo
+whileLoopStatement returns[LoopStmt whileRet]:
+
+    w = WHILE {$whileRet = new LoopStmt(); $whileRet.setLine($w.getLine());}
+    e = expression l = loopCondBody
+    {$whileRet.setBody($l.loopconRet); $whileRet.setCondition($e.exprRet);}
+    ;
 
 //todo
-whileLoopStatement :
-    WHILE expression loopCondBody;
+doWhileLoopStatement returns[LoopStmt doRet]:
+    d = DO {$doRet = new LoopStmt(); $doRet.setLine($d.getLine());}
+    b = body NEWLINE* w = WHILE e = expression
+    {$doRet.setBody($b.bodyRet); $doRet.setCondition($e.exprRet);}
+    ;
 
 //todo
-doWhileLoopStatement :
-    DO body NEWLINE* WHILE expression;
+displayStatement returns[DisplayStmt dispRet]:
+  d = DISPLAY LPAR e = expression RPAR {$dispRet = new DisplayStmt($e.exprRet); $dispRet.setLine($d.getLine());}
+  ;
 
 //todo
-displayStatement :
-  DISPLAY LPAR expression RPAR;
+assignmentStatement returns[AssignmentStmt assignStmtRet]:
+    o = orExpression a = ASSIGN e = expression
+    {$assignStmtRet = new AssignmentStmt($o.orExprRet , $e.exprRet);
+     $assignStmtRet.setLine($a.getLine());} ;
 
 //todo
-assignmentStatement :
-    orExpression ASSIGN expression;
-
-//todo
-singleStatement :
-    ifStatement | displayStatement | functionCallStmt | returnStatement | assignmentStatement
-    | varDecStatement | loopStatement | append | size;
+singleStatement returns[Statement stmtRet]:
+    i = ifStatement {$stmtRet = $i.ifRet}
+    | d = displayStatement {$stmtRet = $d.dispRet}
+    | f = functionCallStmt {$stmtRet = $f.funcCallStmtRet}
+    | r = returnStatement {$stmtRet = $r.returnStmtRet}
+    | a1 = assignmentStatement {$stmtRet = $a1.assignStmtRet}
+    | v = varDecStatement {$stmtRet = $v.varDecRet}
+    | l = loopStatement {$stmtRet = $l.loopStmtRet}
+    | a2 = append {$stmtRet = $a2.appendRet}
+    | s = size {$stmtRet = $s.sizeRet};
 
 //todo
 expression returns[Expression exprRet]:
-    orExpression (op = ASSIGN expression )? ;
+    o = orExpression {$exprRet = $o.orExprRet;}
+    (op = ASSIGN e = expression {$exprRet = $e.exprRet})? ;
 
 //todo
-orExpression:
-    andExpression (op = OR andExpression )*;
+orExpression returns[Expression orExprRet]:
+    a1 = andExpression {$orExprRet = $a1.andExprRet;}
+    (op = OR a2 = andExpression {$orExprRet = $a2.andExprRet;})*;
 
 //todo
-andExpression:
-    equalityExpression (op = AND equalityExpression )*;
+andExpression returns[Expression andExprRet]:
+    e1 = equalityExpression {$andExprRet = $e1.eqExprRet;}
+    (op = AND e2 = equalityExpression {$andExprRet = $e2.eqExprRet;})*;
 
 //todo
-equalityExpression:
-    relationalExpression (op = EQUAL relationalExpression )*;
+equalityExpression returns[Expression eqExprRet]:
+    r1 = relationalExpression {$eqExprRet = $r1.relExprRet;}
+    (op = EQUAL r2 = relationalExpression {$eqExprRet = $r2.relExprRet;})*;
 
 //todo
-relationalExpression:
-    additiveExpression ((op = GREATER_THAN | op = LESS_THAN) additiveExpression )*;
+relationalExpression returns[Expression relExprRet]:
+    a1 = additiveExpression {$relExprRet = $a1.addExprRet;}
+    ((op = GREATER_THAN | op = LESS_THAN) a2 = additiveExpression {$relExprRet = $a2.addExprRet;})*;
 
 //todo
-additiveExpression:
-    multiplicativeExpression ((op = PLUS | op = MINUS) multiplicativeExpression )*;
+additiveExpression returns[Expression addExprRet]:
+    m1 = multiplicativeExpression {$addExprRet = $m1.multExprRet;}
+    ((op = PLUS | op = MINUS) m2 = multiplicativeExpression {$addExprRet = $m2.multExprRet;})*;
 
 //todo
-multiplicativeExpression:
-    preUnaryExpression ((op = MULT | op = DIVIDE) preUnaryExpression )*;
+multiplicativeExpression returns[Expression multExprRet]:
+    p1 = preUnaryExpression {$multExprRet = $p1.preunExprRet;}
+    ((op = MULT | op = DIVIDE) p2 = preUnaryExpression {$multExprRet = $p2.preunExprRet;})*;
 
 //todo
-preUnaryExpression:
-    ((op = NOT | op = MINUS) preUnaryExpression ) | accessExpression;
+preUnaryExpression returns[Expression preunExprRet]:
+    ((op = NOT | op = MINUS) p = preUnaryExpression )  {$preunExprRet = $p.preunExprRet;}
+    | a = accessExpression {$preunExprRet = $a.accessExprRet;}
+    ;
 
 //todo
 accessExpression returns[Expression accessExprRet]:
