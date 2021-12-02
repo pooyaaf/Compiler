@@ -39,15 +39,21 @@ public class NameCollector extends Visitor<Void>{
             DuplicateFunction exception = new DuplicateFunction(functionDec.getLine(),functionDec.getFunctionName().getName());
             functionDec.addError(exception);
         }
-
-
-
+        if(functionDec.getFunctionName() != null){
+            functionDec.getFunctionName().accept(this);
+        }
+        for(VariableDeclaration variableDec: functionDec.getArgs()){
+            variableDec.accept(this);
+        }
+        functionDec.getBody().accept(this);
+        SymbolTable.pop();
         return null;
+
     }
     @Override
     public Void visit(MainDeclaration mainDec) {
        // should be done !!!!!!!!!!!!!!!!!!!!!!
-
+        mainDec.getBody().accept(this);
         return null;
     }
     @Override
@@ -58,6 +64,10 @@ public class NameCollector extends Visitor<Void>{
             DuplicateVar exception = new DuplicateVar(variableDec.getLine(),variableDec.getVarName().getName());
             variableDec.addError(exception);
         }
+        if(variableDec.getVarName() != null) {
+            variableDec.getVarName().accept(this);
+        }
+
         return null;
     }
     @Override
@@ -71,10 +81,28 @@ public class NameCollector extends Visitor<Void>{
             DuplicateStruct exception = new DuplicateStruct(structDec.getLine(),structDec.getStructName().getName());
             structDec.addError(exception);
         }
+        if(structDec.getStructName() != null) {
+            structDec.getStructName().accept(this);
+        }
+        structDec.getBody().accept(this);
+        SymbolTable.pop();
         return null;
     }
     @Override
     public Void visit(SetGetVarDeclaration setGetVarDec) {
+        if(setGetVarDec.getVarName() != null) {
+            setGetVarDec.getVarName().accept(this);
+        }
+        //check this :
+        for(VariableDeclaration variableDec: setGetVarDec.getArgs()){
+            variableDec.accept(this);
+        }
+        if(setGetVarDec.getSetterBody() != null) {
+            setGetVarDec.getSetterBody().accept(this);
+        }
+        if(setGetVarDec.getGetterBody() != null) {
+            setGetVarDec.getGetterBody().accept(this);
+        }
     return  null;
     }
 }
