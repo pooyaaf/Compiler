@@ -32,17 +32,21 @@ public class NameCollector extends Visitor<Void>{
         FunctionSymbolTableItem functionSymbolTableItem = new FunctionSymbolTableItem(functionDec);
         SymbolTable.push(new SymbolTable(SymbolTable.top));
         functionSymbolTableItem.setFunctionSymbolTable(SymbolTable.top);
+
         try {
             SymbolTable.root.put(functionSymbolTableItem);
         }catch (ItemAlreadyExistsException e){
             DuplicateFunction exception = new DuplicateFunction(functionDec.getLine(),functionDec.getFunctionName().getName());
             functionDec.addError(exception);
         }
+
+
+
         return null;
     }
     @Override
     public Void visit(MainDeclaration mainDec) {
-
+       // should be done !!!!!!!!!!!!!!!!!!!!!!
 
         return null;
     }
@@ -58,6 +62,15 @@ public class NameCollector extends Visitor<Void>{
     }
     @Override
     public Void visit(StructDeclaration structDec) {
+        StructSymbolTableItem structSymbolTableItem = new StructSymbolTableItem(structDec);
+        SymbolTable.push(new SymbolTable(SymbolTable.top));
+        structSymbolTableItem.setStructSymbolTable(SymbolTable.top);
+        try {
+            SymbolTable.root.put(structSymbolTableItem);
+        }catch (ItemAlreadyExistsException e){
+            DuplicateStruct exception = new DuplicateStruct(structDec.getLine(),structDec.getStructName().getName());
+            structDec.addError(exception);
+        }
         return null;
     }
     @Override
