@@ -91,9 +91,10 @@ functionArgsDec returns[ArrayList<VariableDeclaration> funcArgDecRet]:
 
 //OK
 //todo
-functionArguments returns[ArrayList<Expression> funcArgRet] locals[ArrayList<Expression> ex]:
-    (e1 = expression {$ex.add($e1.exprRet);} (COMMA e2 = expression {$ex.add($e2.exprRet);})*)?
-    {$funcArgRet = $ex;};
+functionArguments returns[ArrayList<Expression> funcArgRet]:
+    {$funcArgRet = new ArrayList<Expression>(); }
+    (e1 = expression {$funcArgRet.add($e1.exprRet);} (COMMA e2 = expression {$funcArgRet.add($e2.exprRet);})*)?
+   ;
 
 
 //todo
@@ -130,13 +131,13 @@ varDecStatement returns[VarDecStmt varDecRet] locals[VariableDeclaration myVar]:
 //OK
 
 //todo
-functionCallStmt returns[FunctionCallStmt funcCallStmtRet]:
-     o = otherExpression {FunctionCall myfuncCall = new FunctionCall($o.otherExprRet);}
-     ((l = LPAR f1 = functionArguments RPAR) {myfuncCall.setArgs($f1.funcArgRet);}
-     | (DOT i = identifier))* (LPAR f2 = functionArguments {myfuncCall.setArgs($f2.funcArgRet);  myfuncCall.addArg($i.idRet);}RPAR)
-      {$funcCallStmtRet = new FunctionCallStmt(myfuncCall); $funcCallStmtRet.setLine($l.getLine());};
-//should work on line 134
-//todo
+functionCallStmt returns[FunctionCallStmt funcCallStmtRet] locals[Expression temp,FunctionCall temp1]:
+     o = otherExpression
+     ((l = LPAR f1 = functionArguments RPAR) {$temp = new FunctionCall($o.otherExprRet,$f1.funcArgRet); $temp.setLine($o.otherExprRet.getLine());}
+     | (DOT i = identifier {$temp = new StructAccess($temp , $i.idRet); $temp.setLine($i.idRet.getLine());}))* (l = LPAR f2 = functionArguments {$temp1 = new FunctionCall($temp,$f2.funcArgRet);}RPAR)
+      {$funcCallStmtRet = new FunctionCallStmt($temp1); $funcCallStmtRet.setLine($l.getLine());};
+
+//s
 returnStatement returns[ReturnStmt returnStmtRet]:
     r = RETURN {$returnStmtRet = new ReturnStmt(); $returnStmtRet.setLine($r.getLine());}(e = expression {$returnStmtRet.setReturnedExpr($e.exprRet);})?
     ;
@@ -195,7 +196,7 @@ singleStatement returns[Statement stmtRet]:
     | a1 = assignmentStatement {$stmtRet = $a1.assignStmtRet;}
     | v = varDecStatement {$stmtRet = $v.varDecRet;}
     | l = loopStatement {$stmtRet = $l.loopStmtRet;}
-    | a2 = append {$stmtRet = new ListAppendStmt($a2.appendRet);}
+    | a2 = append {$stmtRet = new ListAppendStmt($a2.appendRet); $stmtRet.setLine($a2.appendRet.getLine());}
     | s = size {$stmtRet = new ListSizeStmt($s.sizeRet);}
 ;
 //OK
@@ -331,7 +332,7 @@ otherExpression returns [Expression otherExprRet]:
     v = value
     { $otherExprRet = $v.valueRet; }
     | id = identifier { $otherExprRet = $id.idRet; }
-    //| LPAR (f = functionArguments {$otherExprRet = $f.funcArgRet;} ) RPAR
+    | LPAR (f = functionArguments {$otherExprRet = new ExprInPar($f.funcArgRet);} ) RPAR
     | s = size { $otherExprRet = $s.sizeRet; }
     | a = append { $otherExprRet = $a.appendRet; };
 
