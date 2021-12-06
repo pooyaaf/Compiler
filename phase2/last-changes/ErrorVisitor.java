@@ -15,7 +15,19 @@ import main.ast.nodes.declaration.struct.*;
 import main.ast.nodes.expression.*;
 import main.ast.nodes.expression.values.primitive.*;
 import main.ast.nodes.statement.*;
+import main.ast.nodes.*;
+import main.ast.nodes.declaration.*;
+import main.ast.nodes.declaration.struct.*;
+import main.ast.nodes.expression.*;
+import main.ast.nodes.expression.values.primitive.*;
+import main.ast.nodes.statement.*;
+import main.compileError.nameError.*;
+import main.symbolTable.SymbolTable;
+import main.symbolTable.exceptions.*;
+import main.symbolTable.items.*;
+import main.symbolTable.utils.*;
 import main.visitor.*;
+
 
 import javax.swing.plaf.synth.SynthCheckBoxMenuItemUI;
 
@@ -23,10 +35,17 @@ public class ErrorVisitor extends Visitor<Void> {
     public static boolean err=false;
     @Override
     public Void visit(Program program) {
-        SymbolTable.root = new SymbolTable();
-        SymbolTable.push(new SymbolTable(SymbolTable.root));
+
+        SymbolTable.push(new SymbolTable());
+        SymbolTable.root = SymbolTable.top;
         //
-        SymbolTable.pop();
+        for (StructDeclaration structDeclaration: program.getStructs())
+            structDeclaration.accept(this);
+        for (FunctionDeclaration functionDeclaration:program.getFunctions())
+            functionDeclaration.accept(this);
+        program.getMain().accept(this);
+
+
 
         return null;
     }
@@ -34,6 +53,17 @@ public class ErrorVisitor extends Visitor<Void> {
     @Override
     public Void visit(FunctionDeclaration functionDec) {
 
+        FunctionSymbolTableItem functionSymbolTableItem = new FunctionSymbolTableItem(functionDec);
+        SymbolTable.push(new SymbolTable(SymbolTable.top));
+        functionSymbolTableItem.setFunctionSymbolTable(SymbolTable.top);
+
+        try {
+            SymbolTable.root.put(functionSymbolTableItem);
+        }catch (ItemAlreadyExistsException e){
+            DuplicateFunction exception = new DuplicateFunction(functionDec.getLine(),functionDec.getFunctionName().getName());
+            System.out.println(new DuplicateFunction(functionDec.getLine(),functionDec.getFunctionName().getName()));
+            functionDec.addError(exception);
+        }
         try {
             SymbolTable.root.getItem(StructSymbolTableItem.START_KEY+functionDec.getFunctionName().getName());
             System.out.println(new FunctionStructConflict(functionDec.getLine() ,functionDec.getFunctionName().getName()).getMessage());
@@ -42,17 +72,35 @@ public class ErrorVisitor extends Visitor<Void> {
 
         }
 
+        if(functionDec.getFunctionName() != null){
+            functionDec.getFunctionName().accept(this);
+        }
+        for(VariableDeclaration variableDec: functionDec.getArgs()){
+            variableDec.accept(this);
+        }
+        functionDec.getBody().accept(this);
 
+
+
+
+        SymbolTable.pop();
         return null;
     }
 
     @Override
     public Void visit(MainDeclaration mainDeclaration) {
-        return super.visit(mainDeclaration);
+        mainDeclaration.getBody().accept(this);
+        return null;
     }
 
     @Override
     public Void visit(VariableDeclaration variableDeclaration) {
+        try {
+            SymbolTable.top.put(new VariableSymbolTableItem(variableDeclaration.getVarName()));
+        } catch (ItemAlreadyExistsException e) {
+            DuplicateVar exception = new DuplicateVar(variableDeclaration.getLine(),variableDeclaration.getVarName().getName());
+            variableDeclaration.addError(exception);
+        }
         try {
             SymbolTable.root.getItem(FunctionSymbolTableItem.START_KEY+variableDeclaration.getVarName().getName());
             System.out.println(new VarFunctionConflict(variableDeclaration.getLine() ,variableDeclaration.getVarName().getName()).getMessage());
@@ -63,17 +111,47 @@ public class ErrorVisitor extends Visitor<Void> {
             System.out.println(new VarStructConflict(variableDeclaration.getLine() ,variableDeclaration.getVarName().getName()).getMessage());
         } catch (ItemNotFoundException e) {
         }
+        if(variableDeclaration.getVarName() != null) {
+            variableDeclaration.getVarName().accept(this);
+        }
         return null;
     }
 
     @Override
-    public Void visit(StructDeclaration structDeclaration) {
-        return super.visit(structDeclaration);
+    public Void visit(StructDeclaration structDec) {
+        StructSymbolTableItem structSymbolTableItem = new StructSymbolTableItem(structDec);
+        SymbolTable.push(new SymbolTable(SymbolTable.top));
+        structSymbolTableItem.setStructSymbolTable(SymbolTable.top);
+        try {
+            SymbolTable.root.put(structSymbolTableItem);
+        }catch (ItemAlreadyExistsException e){
+            DuplicateStruct exception = new DuplicateStruct(structDec.getLine(),structDec.getStructName().getName());
+            structDec.addError(exception);
+        }
+        if(structDec.getStructName() != null) {
+            structDec.getStructName().accept(this);
+        }
+        structDec.getBody().accept(this);
+        SymbolTable.pop();
+        return null;
     }
 
     @Override
-    public Void visit(SetGetVarDeclaration setGetVarDeclaration) {
-        return super.visit(setGetVarDeclaration);
+    public Void visit(SetGetVarDeclaration setGetVarDec) {
+        if(setGetVarDec.getVarName() != null) {
+            setGetVarDec.getVarName().accept(this);
+        }
+        //check this :
+        for(VariableDeclaration variableDec: setGetVarDec.getArgs()){
+            variableDec.accept(this);
+        }
+        if(setGetVarDec.getSetterBody() != null) {
+            setGetVarDec.getSetterBody().accept(this);
+        }
+        if(setGetVarDec.getGetterBody() != null) {
+            setGetVarDec.getGetterBody().accept(this);
+        }
+        return  null;
     }
 
     @Override
