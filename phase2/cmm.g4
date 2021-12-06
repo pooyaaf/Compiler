@@ -134,7 +134,7 @@ varDecStatement returns[VarDecStmt varDecRet] locals[VariableDeclaration myVar]:
 functionCallStmt returns[FunctionCallStmt funcCallStmtRet] locals[Expression temp,FunctionCall temp1]:
      o = otherExpression
      ((l = LPAR f1 = functionArguments RPAR) {$temp = new FunctionCall($o.otherExprRet,$f1.funcArgRet); $temp.setLine($o.otherExprRet.getLine());}
-     | (DOT i = identifier {$temp = new StructAccess($temp , $i.idRet); $temp.setLine($i.idRet.getLine());}))* (l = LPAR f2 = functionArguments {$temp1 = new FunctionCall($temp,$f2.funcArgRet);}RPAR)
+     | (DOT i = identifier {$temp = new StructAccess($temp , $i.idRet); $temp.setLine($i.idRet.getLine());}))* (l = LPAR f2 = functionArguments {$temp1 = new FunctionCall($o.otherExprRet,$f2.funcArgRet); $temp1.setLine($l.getLine());}RPAR)
       {$funcCallStmtRet = new FunctionCallStmt($temp1); $funcCallStmtRet.setLine($l.getLine());};
 
 //s
@@ -331,8 +331,8 @@ accessExpression returns[Expression accessExprRet]:
 otherExpression returns [Expression otherExprRet]:
     v = value
     { $otherExprRet = $v.valueRet; }
-    | id = identifier { $otherExprRet = $id.idRet; }
-    | LPAR (f = functionArguments {$otherExprRet = new ExprInPar($f.funcArgRet);} ) RPAR
+    | i1 = identifier { $otherExprRet = $i1.idRet; }
+    | l = LPAR (f = functionArguments {$otherExprRet = new ExprInPar($f.funcArgRet); $otherExprRet.setLine($l.getLine());} ) RPAR
     | s = size { $otherExprRet = $s.sizeRet; }
     | a = append { $otherExprRet = $a.appendRet; };
 
