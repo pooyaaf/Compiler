@@ -19,108 +19,106 @@ cmm returns[Program cmmProgram]:
 
 program returns[Program programRet]:
     {$programRet = new Program();
-     int line = 1;
-     $programRet.setLine(line);
-     }
+     $programRet.setLine(1);}
     (s = structDeclaration {$programRet.addStruct($s.structDeclarationRet);})*
     (f = functionDeclaration {$programRet.addFunction($f.functionDeclarationRet);})*
-    m = main {$programRet.setMain($m.mainRet);};
-
+     m = main {$programRet.setMain($m.mainRet);};
+//OK
 //todo
 main returns[MainDeclaration mainRet]:
     line = MAIN
     {
     $mainRet = new MainDeclaration();
-    $mainRet.setLine($line.getLine());
-    }
+    $mainRet.setLine($line.getLine());}
     LPAR RPAR b = body {$mainRet.setBody($b.bodyRet);};
-
+//OK
 //todo
 structDeclaration returns[StructDeclaration structDeclarationRet]:
+    {$structDeclarationRet = new StructDeclaration() ;}
     s = STRUCT id = identifier
     {
-         $structDeclarationRet = new StructDeclaration() ;
-         $structDeclarationRet.setLine($s.getLine());
          $structDeclarationRet.setStructName($id.idRet);
+         $structDeclarationRet.setLine($s.getLine());
     }
      ((BEGIN s1 = structBody {$structDeclarationRet.setBody($s1.structbodyRet);}NEWLINE+ END)
      | (NEWLINE+ s2 = singleStatementStructBody {$structDeclarationRet.setBody($s2.stmtStructBodyRet);}SEMICOLON?)) NEWLINE+;
-
+//OK
 //todo
 singleVarWithGetAndSet returns[SetGetVarDeclaration setgetVarRet]:
     {$setgetVarRet = new SetGetVarDeclaration();}
     t = type {$setgetVarRet.setVarType($t.typeRet);}
-    i = identifier {$setgetVarRet.setVarName($i.idRet); $setgetVarRet.setLine(i.getLine());}
+    i = identifier {$setgetVarRet.setVarName($i.idRet); $setgetVarRet.setLine($i.idRet.getLine());}
     f = functionArgsDec {$setgetVarRet.setArgs($f.funcArgDecRet);}  BEGIN NEWLINE+
     s = setBody {$setgetVarRet.setSetterBody($s.setbodyRet);}
     g = getBody {$setgetVarRet.setGetterBody($g.getbodyRet);}
     END;
-
+//OK
 //todo
 singleStatementStructBody returns[Statement stmtStructBodyRet]:
     v = varDecStatement {$stmtStructBodyRet = $v.varDecRet;}| s = singleVarWithGetAndSet {$stmtStructBodyRet = $s.setgetVarRet;};
-
+//OK
 //todo
-structBody returns[Statement structbodyRet]:
-    (NEWLINE+ (s1 = singleStatementStructBody {$structbodyRet = $s1.stmtStructBodyRet;}SEMICOLON)*
-    s2 = singleStatementStructBody {$structbodyRet = $s2.stmtStructBodyRet;} SEMICOLON?)+;
-
+structBody returns[BlockStmt structbodyRet]:
+    {$structbodyRet = new BlockStmt();}
+    (NEWLINE+ (s1 = singleStatementStructBody {$structbodyRet.addStatement($s1.stmtStructBodyRet);}SEMICOLON)*
+    s2 = singleStatementStructBody {$structbodyRet.addStatement($s2.stmtStructBodyRet);} SEMICOLON?)+;
+//OK
 //todo
 getBody returns[Statement getbodyRet]:
     GET b = body {$getbodyRet = $b.bodyRet;}NEWLINE+;
-
+//OK
 //todo
 setBody returns[Statement setbodyRet]:
     SET b = body {$setbodyRet = $b.bodyRet;}NEWLINE+;
-
+//OK
 //todo
 functionDeclaration returns[FunctionDeclaration functionDeclarationRet]:
     {$functionDeclarationRet = new FunctionDeclaration();}
     (t = type {$functionDeclarationRet.setReturnType($t.typeRet);}| v = VOID {$functionDeclarationRet.setReturnType(new VoidType());})
-    i = identifier {$functionDeclarationRet.setLine(i.getLine()); $functionDeclarationRet.setFunctionName($i.idRet); }
+    i = identifier {$functionDeclarationRet.setLine($i.idRet.getLine()); $functionDeclarationRet.setFunctionName($i.idRet); }
     f = functionArgsDec {$functionDeclarationRet.setsetArgs($f.funcArgDecRet);}
     b = body {$functionDeclarationRet.setsetBody($b.bodyRet);}
     NEWLINE+;
-
+//OK
 //todo
-functionArgsDec returns[ArrayList<VarDecStmt> funcArgDecRet]:
-    {$funcArgDecRet = new ArrayList<VarDecStmt>();}
+functionArgsDec returns[ArrayList<VariableDeclaration> funcArgDecRet]:
+    {$funcArgDecRet = new ArrayList<VariableDeclaration>();}
     LPAR (t1 = type i1 = identifier {VariableDeclaration myVar = new VariableDeclaration($i1.idRet , $t1.typeRet); $funcArgDecRet.add(myVar);}
     (COMMA t2 = type i2 = identifier {VariableDeclaration myVar = new VariableDeclaration($i2.idRet , $t2.typeRet); $funcArgDecRet.add(myVar);})*)? RPAR
 
     ;
 
-
+//OK
 //todo
 functionArguments returns[ExprInPar funcArgRet]:
     {ArrayList<Expression> ex;}
-    (e1 = expression {ex.add($e1.exprRet;)} (COMMA e2 = expression {ex.add($e2.exprRet;)})*)?
+    (e1 = expression {ex.add($e1.exprRet);} (COMMA e2 = expression {ex.add($e2.exprRet);})*)?
     {$funcArgRet = new ExprInPar(ex);};
 
+//maybe $ in line 97
 //todo
 body returns[Statement bodyRet]:
      (b = blockStatement {$bodyRet = $b.blockRet;}
      | (NEWLINE+ s = singleStatement {$bodyRet = $s.stmtRet;}(SEMICOLON)?));
-
+//OK
 //todo
 loopCondBody returns[Statement loopconRet]:
      (b = blockStatement {$loopconRet =  $b.blockRet;}
      | (NEWLINE+ s = singleStatement {$loopconRet = $s.stmtRet;}));
-
+//OK
 //todo
 blockStatement returns[BlockStmt blockRet]:
     b = BEGIN {$blockRet = new BlockStmt(); $blockRet.setLine($b.getLine());}
     (NEWLINE+ (s1 = singleStatement {$blockRet.addStatement($s1.stmtRet);} SEMICOLON)*
      s2 = singleStatement {$blockRet.addStatement($s2.stmtRet);}(SEMICOLON)?)+ NEWLINE+ END;
-
+//OK
 //todo
 varDecStatement returns[VarDecStmt varDecRet]:
     {$varDecRet = new VarDecStmt();}
     t = type i1 = identifier
-    {VariableDeclaration myVar = new VariableDeclaration($i1.idRet , $t.typeRet); $varDecRet.setLine(i1.getLine());}
+    {myVar = new VariableDeclaration($i1.idRet , $t.typeRet); $varDecRet.setLine($i1.idRet.getLine());}
     (ASSIGN o1 = orExpression
-    {myVar.setDefaultValue($o1.orExprRet);
-    $varDecRet.addVar(myVar);})?
+    {myVar.setDefaultValue($o1.orExprRet);})?{$varDecRet.addVar(myVar);}
     (COMMA i2 = identifier {VariableDeclaration myVar = new VariableDeclaration($i2.idRet , $t.typeRet);}(ASSIGN o2 = orExpression
     {myVar.setDefaultValue($o2.orExprRet);
     $varDecRet.addVar(myVar);}
@@ -128,19 +126,21 @@ varDecStatement returns[VarDecStmt varDecRet]:
 
     ;
 
+//OK
+
 //todo
 functionCallStmt returns[FunctionCallStmt funcCallStmtRet]:
      o = otherExpression ((l = LPAR
      {FunctionCall myfuncCall = new FunctionCall($o.otherExprRet);}
      f1 = functionArguments RPAR) {myfuncCall.setArgs($f1.funcArgRet);}
      | (DOT i = identifier))* (LPAR f2 = functionArguments {myfuncCall.setArgs($f2.funcArgRet);  myfuncCall.addArg($i.idRet);}RPAR)
-      {$funcCallStmtRet = new FunctionCallStmt(myfuncCall.getArgs()); $funcCallStmtRet.setLine($l.getLine());};
-
+      {$funcCallStmtRet = new FunctionCallStmt(myfuncCall); $funcCallStmtRet.setLine($l.getLine());};
+//should work on line 134
 //todo
 returnStatement returns[ReturnStmt returnStmtRet]:
     r = RETURN {$returnStmtRet = new ReturnStmt(); $returnStmtRet.setLine($r.getLine());}(e = expression {$returnStmtRet.setReturnedExpr($e.exprRet);})?
     ;
-
+//OK
 //todo
 ifStatement returns[ConditionalStmt ifRet]:
     if1 = IF
@@ -148,17 +148,18 @@ ifStatement returns[ConditionalStmt ifRet]:
     (l = loopCondBody {$ifRet.setThenBody($l.loopconRet);}
     | b = body {$ifRet.setThenBody($b.bodyRet);}
     e2 = elseStatement {$ifRet.setElseBody($e2.elseRet);});
-
+//OK
 //todo
 elseStatement returns[Statement elseRet]:
      NEWLINE* ELSE l = loopCondBody {$elseRet = $l.loopconRet;}
      ;
-
+//OK
 //todo
 loopStatement returns[LoopStmt loopStmtRet]:
-    w = whileLoopStatement {$loopStmtRet = new LoopStmt(); $loopStmtRet.setLine(w.getLine());}
-    | d = doWhileLoopStatement {$loopStmtRet = new LoopStmt(); $loopStmtRet.setLine(d.getLine());}
+    w = whileLoopStatement {$loopStmtRet = $w.whileRet ;}
+    | d = doWhileLoopStatement {$loopStmtRet = $d.doRet;}
 ;
+//OK
 //todo
 whileLoopStatement returns[LoopStmt whileRet]:
 
@@ -166,49 +167,46 @@ whileLoopStatement returns[LoopStmt whileRet]:
     e = expression l = loopCondBody
     {$whileRet.setBody($l.loopconRet); $whileRet.setCondition($e.exprRet);}
     ;
-
+//OK
 //todo
 doWhileLoopStatement returns[LoopStmt doRet]:
     d = DO {$doRet = new LoopStmt(); $doRet.setLine($d.getLine());}
     b = body NEWLINE* w = WHILE e = expression
     {$doRet.setBody($b.bodyRet); $doRet.setCondition($e.exprRet);}
     ;
-
+//OK
 //todo
 displayStatement returns[DisplayStmt dispRet]:
   d = DISPLAY LPAR e = expression RPAR {$dispRet = new DisplayStmt($e.exprRet); $dispRet.setLine($d.getLine());}
   ;
-
+//OK
 //todo
 assignmentStatement returns[AssignmentStmt assignStmtRet]:
     o = orExpression a = ASSIGN e = expression
     {$assignStmtRet = new AssignmentStmt($o.orExprRet , $e.exprRet);
      $assignStmtRet.setLine($a.getLine());} ;
-
+//OK
 //todo
 singleStatement returns[Statement stmtRet]:
-    i = ifStatement {$stmtRet = $i.ifRet}
-    | d = displayStatement {$stmtRet = $d.dispRet}
-    | f = functionCallStmt {$stmtRet = $f.funcCallStmtRet}
-    | r = returnStatement {$stmtRet = $r.returnStmtRet}
-    | a1 = assignmentStatement {$stmtRet = $a1.assignStmtRet}
-    | v = varDecStatement {$stmtRet = $v.varDecRet}
-    | l = loopStatement {$stmtRet = $l.loopStmtRet}
-    | a2 = append {$stmtRet = $a2.appendRet}
-    | s = size {$stmtRet = $s.sizeRet};
-
+    i = ifStatement {$stmtRet = $i.ifRet;}
+    | d = displayStatement {$stmtRet = $d.dispRet;}
+    | f = functionCallStmt {$stmtRet = $f.funcCallStmtRet;}
+    | r = returnStatement {$stmtRet = $r.returnStmtRet;}
+    | a1 = assignmentStatement {$stmtRet = $a1.assignStmtRet;}
+    | v = varDecStatement {$stmtRet = $v.varDecRet;}
+    | l = loopStatement {$stmtRet = $l.loopStmtRet;}
+    | a2 = append {$stmtRet = new ListAppendStmt($a2.appendRet);}
+    | s = size {$stmtRet = ListSizeStmt($s.sizeRet);};
+//OK
 //todo
 expression returns[Expression exprRet]:
 
     oe = orExpression  { $exprRet = $oe.orExprRet; }
     (a = ASSIGN e = expression
-        {
-            BinaryOperator op = BinaryOperator.assign;
+        {BinaryOperator op = BinaryOperator.assign;
             $exprRet = new BinaryExpression($oe.orExprRet, $e.exprRet, op);
-            $exprRet.setLine($a.getLine());
-        }
-    )? ;
-
+            $exprRet.setLine($a.getLine());})?;
+//OKallExpr
 //todo
 orExpression returns[Expression orExprRet]:
     a1 = andExpression    { $orExprRet = $a1.andExprRet; }
@@ -319,7 +317,7 @@ accessExpression returns[Expression accessExprRet]:
                                                $accessExprRet.setLine($l.getLine());
                                            } RPAR) | (DOT i1 = identifier {
                                                $accessExprRet = new Identifier($i1.idRet);
-                                               $accessExprRet.setLine($i1.line);
+                                               $accessExprRet.setLine($i1.idRet.line);
                                                }))*
     ((l1 = LBRACK e2 = expression    {
                                      $accessExprRet = new ListAccessByIndex($accessExprRet, $e2.exprRet);
@@ -359,7 +357,7 @@ value returns[Value valueRet]:
     b = boolValue
     {
         $valueRet = new BoolValue($b.boolRet);
-        $valueRet.setLine($b.line)
+        $valueRet.setLine($b.boolRet.getLine());
     }
     |
      i = INT_VALUE
@@ -370,26 +368,25 @@ value returns[Value valueRet]:
      ;
 
 //todo
-boolValue returns[BoolValue boolRet , int line]:
+boolValue returns[BoolValue boolRet]:
     t=TRUE
     {
-         $boolRet = true;
-         $line = $t.getLine();
+         $boolRet.setConstant(true);
+         $boolRet.setLine($t.getLine());
     }
     |
      f=FALSE
       {
-          $boolRet = false;
-          $line = f.getline();
+          $boolRet.setConstant(false);
+          $boolRet.setLine($f.getline());
       }
 ;
 //todo
-identifier returns[Identifier idRet, int line]:
+identifier returns[Identifier idRet]:
     id = IDENTIFIER
     {
         $idRet = new Identifier($id.text);
         $idRet.setLine($id.getLine());
-        $line = $id.getLine();
     }
     ;
 //todo
