@@ -123,8 +123,8 @@ varDecStatement returns[VarDecStmt varDecRet] locals[VariableDeclaration myVar]:
     {$myVar.setDefaultValue($o1.orExprRet);})?{$varDecRet.addVar($myVar);}
     (COMMA i2 = identifier {$myVar = new VariableDeclaration($i2.idRet , $t.typeRet);$myVar.setLine($i2.idRet.getLine());}(ASSIGN o2 = orExpression
     {$myVar.setDefaultValue($o2.orExprRet);
-    $varDecRet.addVar($myVar);}
-    )?)*
+    }
+    )?{$varDecRet.addVar($myVar);})*
 
     ;
 
