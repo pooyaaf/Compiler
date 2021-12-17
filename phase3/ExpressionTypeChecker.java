@@ -11,6 +11,9 @@ import main.ast.types.*;
 import main.ast.types.primitives.BoolType;
 import main.ast.types.primitives.IntType;
 import main.compileError.typeError.*;
+import main.symbolTable.SymbolTable;
+import main.symbolTable.exceptions.ItemNotFoundException;
+import main.symbolTable.items.VariableSymbolTableItem;
 import main.visitor.Visitor;
 
 import javax.lang.model.type.NullType;
@@ -175,7 +178,15 @@ public class ExpressionTypeChecker extends Visitor<Type> {
     @Override
     public Type visit(Identifier identifier) {
         //Todo
-        return null;
+        VariableSymbolTableItem item;
+        try{
+            item = (VariableSymbolTableItem) SymbolTable.top.getItem(VariableSymbolTableItem.START_KEY + identifier.getName());
+            return item.getType();
+        }catch(ItemNotFoundException exp){
+            identifier.addError(new VarNotDeclared(identifier.getLine() , identifier.getName()));
+            return new NoType();
+        }
+      
     }
 
     @Override
