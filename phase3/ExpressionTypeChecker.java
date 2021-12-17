@@ -6,15 +6,11 @@ import main.ast.nodes.expression.operators.BinaryOperator;
 import main.ast.nodes.expression.operators.UnaryOperator;
 import main.ast.nodes.expression.values.primitive.BoolValue;
 import main.ast.nodes.expression.values.primitive.IntValue;
-import main.ast.types.FptrType;
-import main.ast.types.ListType;
-import main.ast.types.NoType;
-import main.ast.types.Type;
+import main.ast.nodes.statement.SetGetVarDeclaration;
+import main.ast.types.*;
 import main.ast.types.primitives.BoolType;
 import main.ast.types.primitives.IntType;
-import main.compileError.typeError.AccessByIndexOnNonList;
-import main.compileError.typeError.ListIndexNotInt;
-import main.compileError.typeError.UnsupportedOperandType;
+import main.compileError.typeError.*;
 import main.visitor.Visitor;
 
 import javax.lang.model.type.NullType;
@@ -203,25 +199,51 @@ public class ExpressionTypeChecker extends Visitor<Type> {
     @Override
     public Type visit(StructAccess structAccess) {
         //Todo
-        return null;
+        Type instanceStructType = structAccess.getInstance().accept(this);
+        Type elementStructType = structAccess.getElement().accept(this);
+        /// ...
+
+        if (!(instanceStructType instanceof StructType) && !(instanceStructType  instanceof NoType)){
+            structAccess.addError(new AccessOnNonStruct(structAccess.getLine()));
+        }
+        if (instanceStructType instanceof NoType){
+            return new NoType();
+        }
+        return new NoType();
     }
 
     @Override
     public Type visit(ListSize listSize) {
         //Todo
-        return null;
+        Type argType = listSize.getArg().accept(this);
+        if(!(argType instanceof ListType) && !((argType instanceof NoType))){
+            listSize.addError(new GetSizeOfNonList(listSize.getLine()));
+        }
+        if(argType instanceof NoType){
+            return new NoType();
+        }
+        return new NoType();
     }
 
     @Override
     public Type visit(ListAppend listAppend) {
         //Todo
-        return null;
+        Type listArgType = listAppend.getListArg().accept(this);
+        Type elementArgType = listAppend.getElementArg().accept(this);
+        if(!(listArgType instanceof ListType) && !((listArgType instanceof NoType))){
+            listAppend.addError(new AppendToNonList(listAppend.getLine()));
+        }
+        // to do !
+        if(listArgType instanceof NoType){
+            return new NoType();
+        }
+        return new NoType();
     }
 
     @Override
     public Type visit(ExprInPar exprInPar) {
         //Todo
-        return null;
+        return new NoType();
     }
 
     @Override
