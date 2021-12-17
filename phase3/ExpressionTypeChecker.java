@@ -13,10 +13,12 @@ import main.ast.types.primitives.IntType;
 import main.compileError.typeError.*;
 import main.symbolTable.SymbolTable;
 import main.symbolTable.exceptions.ItemNotFoundException;
+import main.symbolTable.items.StructSymbolTableItem;
 import main.symbolTable.items.VariableSymbolTableItem;
 import main.visitor.Visitor;
 
 import javax.lang.model.type.NullType;
+import java.util.ArrayList;
 
 public class ExpressionTypeChecker extends Visitor<Type> {
     public boolean isCurrentLValue;
@@ -172,7 +174,22 @@ public class ExpressionTypeChecker extends Visitor<Type> {
     @Override
     public Type visit(FunctionCall funcCall) {
         //Todo
-        return null;
+        ////////////////not complete
+        Type instanceType = funcCall.getInstance().accept(this);
+        ArrayList<Type> argsTypes = new ArrayList<>();
+        for(Expression arg : funcCall.getArgs()) {
+            argsTypes.add(arg.accept(this));
+        }
+        if(!(instanceType instanceof FptrType || instanceType instanceof NoType)) {
+            CallOnNoneFptrType exception = new CallOnNoneFptrType(funcCall.getLine());
+            funcCall.addError(exception);
+            return new NoType();
+        }
+        else if(instanceType instanceof NoType) {
+            return new NoType();
+        }
+        else
+            return new NoType();
     }
 
     @Override
@@ -186,7 +203,7 @@ public class ExpressionTypeChecker extends Visitor<Type> {
             identifier.addError(new VarNotDeclared(identifier.getLine() , identifier.getName()));
             return new NoType();
         }
-      
+
     }
 
     @Override
@@ -213,7 +230,6 @@ public class ExpressionTypeChecker extends Visitor<Type> {
         Type instanceStructType = structAccess.getInstance().accept(this);
         Type elementStructType = structAccess.getElement().accept(this);
         /// ...
-
         if (!(instanceStructType instanceof StructType) && !(instanceStructType  instanceof NoType)){
             structAccess.addError(new AccessOnNonStruct(structAccess.getLine()));
         }
