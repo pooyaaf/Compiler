@@ -228,15 +228,23 @@ public class ExpressionTypeChecker extends Visitor<Type> {
         //
         ///////////////////// guess have works !
         Type instanceType  = listAccessByIndex.getInstance().accept(this);
-
+        boolean l = this.lvalue;
         Type indexType = listAccessByIndex.getIndex().accept(this);
+        this.lvalue = l;
 
-        if(!(indexType instanceof IntType) && !(indexType instanceof NoType) )
+        if(!(indexType instanceof IntType) && !(indexType instanceof NoType) ){
             listAccessByIndex.addError(new ListIndexNotInt(listAccessByIndex.getLine()));
-        if(!(instanceType  instanceof ListType) && !(instanceType  instanceof NoType) )
-            listAccessByIndex.addError(new AccessByIndexOnNonList(listAccessByIndex.getLine() ) );
+        }
+
         if(instanceType  instanceof NoType)
             return new NoType();
+
+        if(!(instanceType  instanceof ListType) && !(instanceType  instanceof NoType) ){
+            listAccessByIndex.addError(new AccessByIndexOnNonList(listAccessByIndex.getLine() ) );
+            return new NoType();
+        }
+
+
         return new NoType();
     }
 
@@ -292,12 +300,14 @@ public class ExpressionTypeChecker extends Visitor<Type> {
     @Override
     public Type visit(IntValue intValue) {
         //Todo
+        this.lvalue = true;
         return new IntType();
     }
 
     @Override
     public Type visit(BoolValue boolValue) {
         //Todo
+        this.lvalue = true ;
         return new BoolType();
     }
     // is the second type(a) subtype of first type(b) or not
