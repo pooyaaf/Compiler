@@ -21,7 +21,10 @@ import javax.lang.model.type.NullType;
 import java.util.ArrayList;
 
 public class ExpressionTypeChecker extends Visitor<Type> {
-    public boolean isCurrentLValue;
+    private boolean lvalue = false;
+    public void setLvalue(boolean val){this.lvalue = val;}
+    public boolean getLvalue(){return this.lvalue;}
+    //
 
     public Type checkBinaryLogicalOperator(Type firstType , Type secondType , BinaryExpression binaryExpression){
         if(firstType instanceof NoType && secondType instanceof NoType)
@@ -101,22 +104,31 @@ public class ExpressionTypeChecker extends Visitor<Type> {
             return new BoolType();
         return  new NoType();
     }
-    public Type checkAssignOperator(Type firstType , Type secondType , BinaryExpression binaryExpression) {
-
-        return new NoType();
+    public Type checkAssignOperator(boolean l,Type firstType , Type secondType , BinaryExpression binaryExpression) {
+        if (l) {
+            binaryExpression.addError(new LeftSideNotLvalue(binaryExpression.getLine()));
+        }
+        if(firstType instanceof NoType)
+            return new NoType();
+        if (!isSubType(secondType, firstType)) {
+            UnsupportedOperandType err = new UnsupportedOperandType(binaryExpression.getLine(), binaryExpression.getBinaryOperator().toString());
+            binaryExpression.addError(err);
+            return new NoType();
+        } else {
+            if (l)
+                return new NoType();
+            return firstType;
+        }
     }
     @Override
     public Type visit(BinaryExpression binaryExpression) {
         //Todo
-
-
 //        BinaryOperator operator = binaryExpression.getBinaryOperator();
-
+        this.lvalue = false;
         Type firstType = binaryExpression.getFirstOperand().accept(this);
-
-
+        boolean l = this.lvalue;
+        this.lvalue = true;
         Type secondType = binaryExpression.getSecondOperand().accept(this);
-        this.isCurrentLValue = false;
         //
         if((binaryExpression.getBinaryOperator() == BinaryOperator.and) || (binaryExpression.getBinaryOperator() == BinaryOperator.or) )
             return checkBinaryLogicalOperator(firstType , secondType , binaryExpression);// &  |  Logical Operators
@@ -133,42 +145,47 @@ public class ExpressionTypeChecker extends Visitor<Type> {
             return checkLessThanOrGreaterThan(firstType,secondType,binaryExpression); // check > and <
         }
         else {
-    //////////////////////////////////////// should be done!!!!!!!!!
-            return checkAssignOperator(firstType , secondType , binaryExpression);     //check = ( assignment )
+            return checkAssignOperator(l,firstType , secondType , binaryExpression);     //check = ( assignment )
         }
 
 
     }
-    private Type checkNot(Type operandType , UnaryExpression unaryExpression){
-        if(operandType instanceof NoType)
-            return new NoType();
-        if(operandType instanceof BoolType)
-            return operandType;
-        UnsupportedOperandType exception = new UnsupportedOperandType(unaryExpression.getLine(), unaryExpression.getOperator().name());
-        unaryExpression.addError(exception);
-        return new NoType();
-    }
 
-    private Type checkMinus(Type operandType , UnaryExpression unaryExpression){
-        if(operandType instanceof NoType)
-            return new NoType();
-        if(operandType instanceof IntType)
-            return operandType;
-        UnsupportedOperandType exception = new UnsupportedOperandType(unaryExpression.getLine(), unaryExpression.getOperator().name());
-        unaryExpression.addError(exception);
-        return new NoType();
-    }
 
     @Override
     public Type visit(UnaryExpression unaryExpression) {
         //Todo
-        Type operandType = unaryExpression.getOperand().accept(this);
-        //
-        if(unaryExpression.getOperator() == UnaryOperator.not)
-            return checkNot(operandType , unaryExpression); // not
-        else
-            return checkMinus(operandType , unaryExpression); // minus
+        this.lvalue=false;
+        Type operand = unaryExpression.getOperand().accept(this);
+        boolean l = this.lvalue;
+        this.lvalue = true;
+        UnaryOperator operator = unaryExpression.getOperator();
+        switch (operator){
+            case minus -> {
+                if (operand instanceof IntType)
+                    return new IntType();
+                if (operand instanceof NoType) {
+                    return new NoType();
+                } else {
+                    UnsupportedOperandType err = new UnsupportedOperandType(unaryExpression.getLine(), operator.toString());
+                    unaryExpression.addError(err);
+                }
+                return new NoType();
+            }
+            case not ->{
+                if (operand instanceof BoolType)
+                    return new BoolType();
+                if (operand instanceof NoType) {
+                    return new NoType();
+                } else {
+                    UnsupportedOperandType err = new UnsupportedOperandType(unaryExpression.getLine(), operator.toString());
+                    unaryExpression.addError(err);
+                }
+                return new NoType();
+            }
+        }
 
+        return null;
     }
 
     @Override
@@ -210,11 +227,10 @@ public class ExpressionTypeChecker extends Visitor<Type> {
     public Type visit(ListAccessByIndex listAccessByIndex) {
         //
         ///////////////////// guess have works !
-        boolean prevIsCurrentLValue;
         Type instanceType  = listAccessByIndex.getInstance().accept(this);
-        prevIsCurrentLValue = this.isCurrentLValue;
+
         Type indexType = listAccessByIndex.getIndex().accept(this);
-        this.isCurrentLValue = prevIsCurrentLValue;
+
         if(!(indexType instanceof IntType) && !(indexType instanceof NoType) )
             listAccessByIndex.addError(new ListIndexNotInt(listAccessByIndex.getLine()));
         if(!(instanceType  instanceof ListType) && !(instanceType  instanceof NoType) )
@@ -283,5 +299,45 @@ public class ExpressionTypeChecker extends Visitor<Type> {
     public Type visit(BoolValue boolValue) {
         //Todo
         return new BoolType();
+    }
+    // is the second type(a) subtype of first type(b) or not
+    public boolean isSubType(Type a, Type b){
+        if(a instanceof NoType){
+            return true;
+        }
+        if(b instanceof NoType){
+            return false;
+        }
+        if((a instanceof IntType && b instanceof IntType)
+                ||(a instanceof BoolType && b instanceof BoolType) || (a instanceof NullType && b instanceof NullType)){
+            return true;
+        }
+
+        if((a instanceof FptrType || a instanceof NullType) && (b instanceof FptrType || b instanceof NullType)){
+            if(a instanceof NullType)
+                return true;
+            if(b instanceof NullType)
+                return false;
+            FptrType fptrA = (FptrType) a;
+            FptrType fptrB = (FptrType) b;
+            if(!(isSubType(fptrA.getReturnType(), fptrB.getReturnType()))){
+                return false;
+            }
+            else{
+                ArrayList<Type> argsA = fptrA.getArgsType();
+                ArrayList<Type> argsB = fptrB.getArgsType();
+                if(argsA.size() != argsB.size()){
+                    return false;
+                }
+                int size = argsA.size();
+                for(int j = 0; j < size; j++){
+                    if(!isSubType(argsB.get(j), argsA.get(j))){
+                        return false;
+                    }
+                }
+                return true;
+            }
+        }
+        return false;
     }
 }
