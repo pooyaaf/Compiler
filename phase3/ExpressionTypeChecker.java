@@ -10,11 +10,13 @@ import main.ast.nodes.statement.SetGetVarDeclaration;
 import main.ast.types.*;
 import main.ast.types.primitives.BoolType;
 import main.ast.types.primitives.IntType;
+import main.ast.types.primitives.VoidType;
 import main.compileError.typeError.*;
 import main.symbolTable.SymbolTable;
 import main.symbolTable.exceptions.ItemNotFoundException;
 import main.symbolTable.items.FunctionSymbolTableItem;
 import main.symbolTable.items.StructSymbolTableItem;
+import main.symbolTable.items.SymbolTableItem;
 import main.symbolTable.items.VariableSymbolTableItem;
 import main.visitor.Visitor;
 
@@ -205,40 +207,49 @@ public class ExpressionTypeChecker extends Visitor<Type> {
             funcCall.addError(exception);
             return new NoType();
         }
-        else if(instanceType instanceof NoType) {
+        if(instanceType instanceof NoType) {
             return new NoType();
         }
-        else
+        if(argsTypes.size() != funcCall.getArgs().size())
+        {
+            funcCall.addError(new ArgsInFunctionCallNotMatchDefinition(funcCall.getLine()));
             return new NoType();
+        }
+        for(int i=0 ; i<=funcCall.getArgs().size();i++){
+            if(!(argsTypes.get(i) instanceof BoolType && ((FptrType) instanceType).getArgsType().get(i) instanceof BoolType) ||
+            !(argsTypes.get(i) instanceof IntType && ((FptrType) instanceType).getArgsType().get(i) instanceof IntType) ||
+            !(argsTypes.get(i) instanceof StructType  && ((FptrType) instanceType).getArgsType().get(i) instanceof StructType ) ||
+            !(argsTypes.get(i) instanceof FptrType  && ((FptrType) instanceType).getArgsType().get(i) instanceof FptrType ) ||
+            !(argsTypes.get(i) instanceof ListType  && ((FptrType) instanceType).getArgsType().get(i) instanceof ListType )
+            ){
+                funcCall.addError(new ArgsInFunctionCallNotMatchDefinition(funcCall.getLine()));
+                return new NoType();
+            }
+        }
+        return ((FptrType) instanceType).getReturnType();
     }
 
     @Override
     public Type visit(Identifier identifier) {
         //Todo
-        int counter = 0;
-
-        try {
-            StructSymbolTableItem structSymbolTableItem = (StructSymbolTableItem) SymbolTable.top.getItem(StructSymbolTableItem.START_KEY+identifier.getName());
-            return new StructType(structSymbolTableItem.getStructDeclaration().getStructName());
-        }catch (ItemNotFoundException itemNotFoundException){
-            counter += 1;
-
+        try
+        {
+            SymbolTableItem varItem = SymbolTable.top.getItem(identifier.getName());
+            //cases
+            if(varItem instanceof FunctionSymbolTableItem){
+                return new FptrType(((FunctionSymbolTableItem) varItem).getArgTypes(),((FunctionSymbolTableItem) varItem).getReturnType());
+            }
+            if(varItem instanceof StructSymbolTableItem){
+                return new StructType(((StructSymbolTableItem) varItem).getStructDeclaration().getStructName());
+            }
+            if(varItem instanceof VariableSymbolTableItem){
+                return ((VariableSymbolTableItem) varItem).getType();
+            }
         }
-        try {
-            VariableSymbolTableItem variableSymbolTableItem = (VariableSymbolTableItem) SymbolTable.top.getItem(VariableSymbolTableItem.START_KEY + identifier.getName());
-            return variableSymbolTableItem.getType();
-        } catch (ItemNotFoundException itemNotFoundException) {
-            counter += 1;
+        catch (ItemNotFoundException ex) {
+            identifier.addError(new VarNotDeclared(identifier.getLine(), identifier.getName()));
         }
-        try {
-            FunctionSymbolTableItem functionSymbolTableItem = (FunctionSymbolTableItem) SymbolTable.top.getItem(FunctionSymbolTableItem.START_KEY + identifier.getName());
-            return new FptrType(functionSymbolTableItem.getArgTypes(), functionSymbolTableItem.getReturnType());
-        } catch (ItemNotFoundException itemNotFoundException) {
-            counter += 1;
-        }
-    /////////////////////// error  -- > VarNotDec Not should be done
-      return null;
-
+        return null;
     }
 
     @Override
@@ -248,6 +259,10 @@ public class ExpressionTypeChecker extends Visitor<Type> {
        //
         if ((instanceType instanceof NoType) || (indexType instanceof NoType)){
             return new NoType();
+        }
+        if (indexType instanceof IntType && instanceType instanceof ListType)
+        {
+            return ((ListType) instanceType).getType();
         }
         boolean wasNotInt = false ;
         if ( !(indexType instanceof IntType)) {
@@ -266,15 +281,6 @@ public class ExpressionTypeChecker extends Visitor<Type> {
         //Todo
         Type instanceStructType = structAccess.getInstance().accept(this);
         Type elementStructType = structAccess.getElement().accept(this);
-        /////////////////////// error  -- > 3 should be done
-//        try {
-//            SymbolTable.top.getItem(StructSymbolTableItem.START_KEY);
-//
-//            // TODO : Check arguments types
-//        } catch (ItemNotFoundException itemNotFoundException) {
-//            structAccess.addError(new StructNotDeclared(structAccess.getLine(), structAccess.get));
-//            return new NoType();
-//        }
         //
         if (instanceStructType instanceof NoType){
             return new NoType();
@@ -282,8 +288,29 @@ public class ExpressionTypeChecker extends Visitor<Type> {
         if (!(instanceStructType instanceof StructType) && !(instanceStructType  instanceof NoType)){
             structAccess.addError(new AccessOnNonStruct(structAccess.getLine()));
         }
+        //
+        String variableName =structAccess.getElement().getName();
+        String structName = ((StructType) instanceStructType).getStructName().getName();
+        try
+        {
+            StructSymbolTableItem struct = (StructSymbolTableItem) SymbolTable.top.getItem(structName);
+            SymbolTable structTable = struct.getStructSymbolTable();
+            try
+            {
+                VariableSymbolTableItem element = (VariableSymbolTableItem) structTable.getItem(variableName);
+                return element.getType();
+            }
+            catch (ItemNotFoundException ex)
+            {
+                structAccess.addError(new StructMemberNotFound(structAccess.getLine(),structName,variableName));
+                return new NoType();
+            }
+        }
+        catch (ItemNotFoundException ex)
+        {
+            return new NoType();
+        }
 
-        return new NoType();
     }
 
     @Override
@@ -297,6 +324,10 @@ public class ExpressionTypeChecker extends Visitor<Type> {
             listSize.addError(new GetSizeOfNonList(listSize.getLine()));
         }
 
+        if(argType instanceof ListType)
+        {
+            return new IntType();
+        }
         return new NoType();
     }
 
@@ -311,11 +342,20 @@ public class ExpressionTypeChecker extends Visitor<Type> {
         }
         if(!(listArgType instanceof ListType) && !((listArgType instanceof NoType))){
             listAppend.addError(new AppendToNonList(listAppend.getLine()));
+            return new NoType();
         }
         //
-        if (!isSubType(elementArgType,listArgType)){
+        Type elementArgTypes = ((ListType) listArgType).getType();
+        if((elementArgType instanceof BoolType && elementArgTypes instanceof BoolType ) ||
+                (elementArgType instanceof IntType && elementArgTypes instanceof IntType ) ||
+                (elementArgType instanceof StructType && elementArgTypes instanceof StructType ) ||
+                (elementArgType instanceof ListType && elementArgTypes instanceof ListType ) )
+        {
+            return new VoidType();
+        }
+        if(!(elementArgTypes instanceof NoType))
+        {
             listAppend.addError(new NewElementTypeNotMatchListType(listAppend.getLine()));
-            return new NoType();
         }
         return new NoType();
     }
@@ -323,7 +363,7 @@ public class ExpressionTypeChecker extends Visitor<Type> {
     @Override
     public Type visit(ExprInPar exprInPar) {
         //Todo
-        return new NoType();
+        return exprInPar.getInputs().get(0).accept(this);
     }
 
     @Override
