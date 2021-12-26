@@ -31,14 +31,11 @@ public class ExpressionTypeChecker extends Visitor<Type> {
     private boolean functioncall_statement = false;
     private boolean isStatement = false;
     public void set_functioncall_statement(boolean val){this.functioncall_statement = val;}
-    public boolean get_functioncall_statemen(){return this.functioncall_statement;}
+
     public void setLvalue(boolean val){this.lvalue = val;}
     public boolean getLvalue(){return this.lvalue;}
 
-    public void setAsStatement()
-    {
-        isStatement = true;
-    }
+
 
     public Type checkBinaryLogicalOperator(Type firstType , Type secondType , BinaryExpression binaryExpression){
         if((firstType instanceof BoolType && secondType instanceof BoolType))
