@@ -48,16 +48,8 @@ public class TypeChecker extends Visitor<Void> {
     Scope top = new Scope();
     Stack<Scope> scopes;
 
-    private void addScope(SymbolTable pre){
-        SymbolTable.push(new SymbolTable(pre));
-        top = new Scope();
-        scopes.push(new Scope());
-    }
 
-    private void removeScope() {
-        SymbolTable.pop();
-        top = scopes.pop();
-    }
+
 
     boolean noDeclare = false;
     boolean hasReturn = false;
@@ -302,7 +294,7 @@ public class TypeChecker extends Visitor<Void> {
     public Void visit(ConditionalStmt conditionalStmt) {
         //Todo
         Type condType = conditionalStmt.getCondition().accept(expressionTypeChecker);
-        if(!(condType instanceof BoolType))
+        if(!(condType instanceof BoolType || condType instanceof  NoType))
             conditionalStmt.addError(new ConditionNotBool(conditionalStmt.getLine()));
         if(conditionalStmt.getThenBody() != null) {
             SymbolTable ifScope = new SymbolTable(SymbolTable.top);
