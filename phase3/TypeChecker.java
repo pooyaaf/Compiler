@@ -6,10 +6,7 @@ import main.ast.nodes.declaration.struct.*;
 import main.ast.nodes.expression.Identifier;
 import main.ast.nodes.expression.operators.BinaryOperator;
 import main.ast.nodes.statement.*;
-import main.ast.types.FptrType;
-import main.ast.types.ListType;
-import main.ast.types.NoType;
-import main.ast.types.Type;
+import main.ast.types.*;
 import main.ast.types.primitives.BoolType;
 import main.ast.types.primitives.IntType;
 import main.ast.types.primitives.VoidType;
@@ -30,13 +27,15 @@ import java.util.ArrayList;
 
 public class TypeChecker extends Visitor<Void> {
     private boolean firstVisit = true;
-
+    ArrayList<VariableDeclaration> argsInSetGet;
     private boolean isInStruct = false;
     private String curStructName;
     private int newId = 1;
     ExpressionTypeChecker expressionTypeChecker;
     public boolean canUseReturn = true;
     public boolean isInSetGet = false;
+    public boolean isInGet = false;
+    private boolean isOnlyReturn = false;
     private FunctionDeclaration currentFunctionName;
     private StructDeclaration currentStructName;
 
@@ -93,7 +92,7 @@ public class TypeChecker extends Visitor<Void> {
     public Void visit(Program program) {
         //Todo
         this.expressionTypeChecker = new ExpressionTypeChecker();
-
+        argsInSetGet = new ArrayList<VariableDeclaration>();
         SymbolTable root = new SymbolTable();
         SymbolTable.root = root;
         SymbolTable.push(root);
@@ -141,6 +140,19 @@ public class TypeChecker extends Visitor<Void> {
                 return true;
 
         }
+        if(body instanceof BlockStmt){
+            ArrayList<Statement> stmt1 = ((BlockStmt) body).getStatements();
+            for (Statement stmt : stmt1){
+                if(stmt instanceof ConditionalStmt){
+                    Statement stmtA = ((ConditionalStmt) stmt).getThenBody();
+                    Statement stmtB = ((ConditionalStmt) stmt).getElseBody();
+                    if(stmtA instanceof ReturnStmt || stmtB instanceof ReturnStmt)
+                        return true;
+                }
+                if(stmt instanceof ReturnStmt)
+                    return true;
+            }
+        }
         return false;
     }
 
@@ -165,9 +177,7 @@ public class TypeChecker extends Visitor<Void> {
         if(!has_return && !(functionDec.getReturnType() instanceof NullType)){
             functionDec.addError(new MissingReturnStatement(functionDec.getLine(),functionDec.getFunctionName().getName()));
         }
-        else if(has_return && functionDec.getReturnType() instanceof VoidType){
-            functionDec.addError(new CannotUseReturn(functionDec.getLine()));
-        }
+
         functionDec.getBody().accept(this);
 
         return null;
@@ -194,7 +204,11 @@ public class TypeChecker extends Visitor<Void> {
             } catch (ItemAlreadyExistsException exception3) { //unreachable
             }
         }
-        //variableDec = CheckVarDec(variableDec, variableDec.getVarType());
+        if(variableDec.getDefaultValue() != null){
+            AssignmentStmt assign = new AssignmentStmt(variableDec.getVarName(),variableDec.getDefaultValue());
+            assign.accept(this);
+        }
+        variableDec = CheckVarDec(variableDec, variableDec.getVarType());
         return null;
     }
 
@@ -204,11 +218,30 @@ public class TypeChecker extends Visitor<Void> {
 
 
 
-//    public VariableDeclaration CheckVarDec(VariableDeclaration varDeclaration, Type varDeclarationType){
-//
-//
-//    }
+    public VariableDeclaration CheckVarDec(VariableDeclaration varDeclaration, Type varDeclarationType) {
+        if (varDeclarationType instanceof StructType) {
+            StructType stype = (StructType) varDeclarationType;
+            try {
+                SymbolTable.root.getItem(StructSymbolTableItem.START_KEY + stype.getStructName().getName());
+            } catch (ItemNotFoundException exc) {
+                varDeclaration.addError(new StructNotDeclared(varDeclaration.getLine(), stype.getStructName().getName()));
+                varDeclaration.setVarType(new NoType());
+                return varDeclaration;
+            }
+        } else if (varDeclarationType instanceof ListType) {
+            //todo
 
+
+
+        } else if (varDeclarationType instanceof FptrType) {
+            FptrType fptrType = (FptrType) varDeclarationType;
+            for (Type arg : fptrType.getArgsType()) {
+                varDeclaration = CheckVarDec(varDeclaration, arg);
+            }
+            varDeclaration = CheckVarDec(varDeclaration, fptrType.getReturnType());
+        }
+        return varDeclaration;
+    }
 
     @Override
     public Void visit(StructDeclaration structDec) {
@@ -230,6 +263,9 @@ public class TypeChecker extends Visitor<Void> {
             funcDec.setFunctionName(new Identifier(name));
             funcDec.setReturnType(setGetVarDec.getVarType());
             funcDec.setArgs(setGetVarDec.getArgs());
+            for(VariableDeclaration arg : setGetVarDec.getArgs()){
+                argsInSetGet.add(arg);
+            }
             FunctionSymbolTableItem newItem = new FunctionSymbolTableItem(funcDec);
             newItem.setFunctionSymbolTable(newSym);
             currentFunctionName = funcDec;
@@ -268,25 +304,13 @@ public class TypeChecker extends Visitor<Void> {
         canUseReturn = false;
         setGetVarDec.getSetterBody().accept(this);
         canUseReturn = true;
+        isInGet = true;
         setGetVarDec.getGetterBody().accept(this);
+        isInGet =false;
         isInSetGet = false;
         return null;
     }
 
-
-    private Void checkAssignOperator(boolean leftValueCheck , Type leftValue , Type rightValue , AssignmentStmt assignmentStmt){
-        boolean properAssignment;
-        if(!leftValueCheck)
-            assignmentStmt.addError(new LeftSideNotLvalue(assignmentStmt.getLine()));
-
-        if(rightValue instanceof NoType)
-            return null;
-
-        //properAssignment = this.expressionTypeChecker.
-//        if(!properAssignment)
-//            assignmentStmt.addError(new UnsupportedOperandType(assignmentStmt.getLine(), BinaryOperator.assign.name() ));
-        return null;
-    }
 
 
     @Override
@@ -302,7 +326,7 @@ public class TypeChecker extends Visitor<Void> {
         }
         if(lhsType instanceof NoType)
             return null;
-        if (!isSubType(rhsType, lhsType)){
+        if (!isSubType(rhsType, lhsType)) {
             int line = assignmentStmt.getLine();
             assignmentStmt.addError(new UnsupportedOperandType(line, BinaryOperator.assign.toString()));
         }
@@ -363,6 +387,17 @@ public class TypeChecker extends Visitor<Void> {
         //Todo
         if(canUseReturn == false){
             returnStmt.addError(new CannotUseReturn(returnStmt.getLine()));
+            return null;
+        }
+        if(isInGet == true){
+            for (VariableDeclaration arg : argsInSetGet) {
+                String retName = returnStmt.getReturnedExpr().toString();
+                String argName = arg.getVarName().toString();
+                if (argName.equals(retName)) {
+                    returnStmt.addError(new VarNotDeclared(returnStmt.getLine(), arg.getVarName().getName()));
+                    return  null;
+                }
+            }
         }
         if(returnStmt != null){
             if(returnStmt.getReturnedExpr() != null){
