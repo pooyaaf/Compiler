@@ -41,10 +41,14 @@ public class ExpressionTypeChecker extends Visitor<Type> {
     }
 
     public Type checkBinaryLogicalOperator(Type firstType , Type secondType , BinaryExpression binaryExpression){
-        if(firstType instanceof NoType && secondType instanceof NoType)
+        if((firstType instanceof BoolType && secondType instanceof BoolType))
+        {
+            return new BoolType();
+        }
+        else if(firstType instanceof NoType && secondType instanceof NoType)
             return new NoType();
-        else if((firstType instanceof NoType && !(secondType instanceof IntType)) ||
-                (secondType instanceof NoType && !(firstType instanceof IntType))) {
+        else if((firstType instanceof NoType && !(secondType instanceof BoolType)) ||
+                (secondType instanceof NoType && !(firstType instanceof BoolType))) {
             UnsupportedOperandType exception = new UnsupportedOperandType(binaryExpression.getLine(), binaryExpression.getBinaryOperator().name());
             binaryExpression.addError(exception);
             return new NoType();
@@ -61,8 +65,7 @@ public class ExpressionTypeChecker extends Visitor<Type> {
         {
             return new NoType();
         }
-        else if((firstType instanceof NoType && secondType instanceof ListType) ||
-                (secondType instanceof NoType && firstType instanceof ListType)) {
+        else if(firstType instanceof ListType ||secondType instanceof ListType) {
             UnsupportedOperandType exception = new UnsupportedOperandType(binaryExpression.getLine(), binaryExpression.getBinaryOperator().name());
             binaryExpression.addError(exception);
             return new NoType();
