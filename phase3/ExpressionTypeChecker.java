@@ -1,6 +1,8 @@
 package main.visitor.type;
 
 import com.sun.jdi.LocalVariable;
+import main.ast.nodes.declaration.FunctionDeclaration;
+import main.ast.nodes.declaration.struct.StructDeclaration;
 import main.ast.nodes.expression.*;
 import main.ast.nodes.expression.operators.BinaryOperator;
 import main.ast.nodes.expression.operators.UnaryOperator;
@@ -24,12 +26,16 @@ import javax.lang.model.type.NullType;
 import java.util.ArrayList;
 
 public class ExpressionTypeChecker extends Visitor<Type> {
+    public boolean isCurrentLValue;
     private boolean lvalue = false;
-    private int typeValidationNumberOfErrors;
+    private boolean functioncall_statement = false;
 
+    public void set_functioncall_statement(boolean val){this.functioncall_statement = val;}
+    public boolean get_functioncall_statemen(){return this.functioncall_statement;}
     public void setLvalue(boolean val){this.lvalue = val;}
     public boolean getLvalue(){return this.lvalue;}
-    //
+
+
 
     public Type checkBinaryLogicalOperator(Type firstType , Type secondType , BinaryExpression binaryExpression){
         if(firstType instanceof NoType && secondType instanceof NoType)
@@ -193,6 +199,7 @@ public class ExpressionTypeChecker extends Visitor<Type> {
         return null;
     }
 
+
     @Override
     public Type visit(FunctionCall funcCall) {
         //Todo
@@ -217,10 +224,10 @@ public class ExpressionTypeChecker extends Visitor<Type> {
         }
         for(int i=0 ; i<=funcCall.getArgs().size();i++){
             if(!(argsTypes.get(i) instanceof BoolType && ((FptrType) instanceType).getArgsType().get(i) instanceof BoolType) ||
-            !(argsTypes.get(i) instanceof IntType && ((FptrType) instanceType).getArgsType().get(i) instanceof IntType) ||
-            !(argsTypes.get(i) instanceof StructType  && ((FptrType) instanceType).getArgsType().get(i) instanceof StructType ) ||
-            !(argsTypes.get(i) instanceof FptrType  && ((FptrType) instanceType).getArgsType().get(i) instanceof FptrType ) ||
-            !(argsTypes.get(i) instanceof ListType  && ((FptrType) instanceType).getArgsType().get(i) instanceof ListType )
+                    !(argsTypes.get(i) instanceof IntType && ((FptrType) instanceType).getArgsType().get(i) instanceof IntType) ||
+                    !(argsTypes.get(i) instanceof StructType  && ((FptrType) instanceType).getArgsType().get(i) instanceof StructType ) ||
+                    !(argsTypes.get(i) instanceof FptrType  && ((FptrType) instanceType).getArgsType().get(i) instanceof FptrType ) ||
+                    !(argsTypes.get(i) instanceof ListType  && ((FptrType) instanceType).getArgsType().get(i) instanceof ListType )
             ){
                 funcCall.addError(new ArgsInFunctionCallNotMatchDefinition(funcCall.getLine()));
                 return new NoType();
@@ -232,31 +239,46 @@ public class ExpressionTypeChecker extends Visitor<Type> {
     @Override
     public Type visit(Identifier identifier) {
         //Todo
-        try
-        {
-            SymbolTableItem varItem = SymbolTable.top.getItem(identifier.getName());
+        try {
+
+
+            SymbolTableItem varItem = SymbolTable.top.getItem(VariableSymbolTableItem.START_KEY + identifier.getName());
             //cases
-            if(varItem instanceof FunctionSymbolTableItem){
-                return new FptrType(((FunctionSymbolTableItem) varItem).getArgTypes(),((FunctionSymbolTableItem) varItem).getReturnType());
-            }
-            if(varItem instanceof StructSymbolTableItem){
-                return new StructType(((StructSymbolTableItem) varItem).getStructDeclaration().getStructName());
-            }
-            if(varItem instanceof VariableSymbolTableItem){
-                return ((VariableSymbolTableItem) varItem).getType();
+            Type ident = ((VariableSymbolTableItem) varItem).getType();
+            if (ident instanceof StructType) {
+                Identifier structName = ((StructType) ident).getStructName();
+
+                try {
+                    SymbolTable.top.getItem(StructSymbolTableItem.START_KEY + structName.getName());
+                    return ident;
+                } catch (ItemNotFoundException excep) {
+                    return new NoType();
+                }
+
+
+            } else {
+                return ident;
             }
         }
-        catch (ItemNotFoundException ex) {
-            identifier.addError(new VarNotDeclared(identifier.getLine(), identifier.getName()));
+        catch (ItemNotFoundException excep){
+            try {
+                FunctionSymbolTableItem funItem = (FunctionSymbolTableItem) SymbolTable.top.getItem(FunctionSymbolTableItem.START_KEY + identifier.getName());
+                return new FptrType(funItem.getArgTypes(), funItem.getReturnType());
+            }catch (ItemNotFoundException exceptionSecond)
+            {
+                identifier.addError(new VarNotDeclared(identifier.getLine(), identifier.getName()));
+            }
         }
-        return null;
+
+
+        return new NoType();
     }
 
     @Override
     public Type visit(ListAccessByIndex listAccessByIndex) {
-       Type indexType = listAccessByIndex.getIndex().accept(this);
-       Type instanceType = listAccessByIndex.getInstance().accept(this);
-       //
+        Type indexType = listAccessByIndex.getIndex().accept(this);
+        Type instanceType = listAccessByIndex.getInstance().accept(this);
+        //
         if ((instanceType instanceof NoType) || (indexType instanceof NoType)){
             return new NoType();
         }
@@ -280,7 +302,7 @@ public class ExpressionTypeChecker extends Visitor<Type> {
     public Type visit(StructAccess structAccess) {
         //Todo
         Type instanceStructType = structAccess.getInstance().accept(this);
-        Type elementStructType = structAccess.getElement().accept(this);
+        String variableName = structAccess.getElement().getName();
         //
         if (instanceStructType instanceof NoType){
             return new NoType();
@@ -288,8 +310,7 @@ public class ExpressionTypeChecker extends Visitor<Type> {
         if (!(instanceStructType instanceof StructType) && !(instanceStructType  instanceof NoType)){
             structAccess.addError(new AccessOnNonStruct(structAccess.getLine()));
         }
-        //
-        String variableName =structAccess.getElement().getName();
+
         String structName = ((StructType) instanceStructType).getStructName().getName();
         try
         {
@@ -312,6 +333,7 @@ public class ExpressionTypeChecker extends Visitor<Type> {
         }
 
     }
+
 
     @Override
     public Type visit(ListSize listSize) {
@@ -379,7 +401,7 @@ public class ExpressionTypeChecker extends Visitor<Type> {
         this.lvalue = true ;
         return new BoolType();
     }
-    // is the second type(a) subtype of first type(b) or not
+
     public boolean isSubType(Type a, Type b){
         if(a instanceof NoType){
             return true;
@@ -387,8 +409,8 @@ public class ExpressionTypeChecker extends Visitor<Type> {
         if(b instanceof NoType){
             return false;
         }
-        if((a instanceof IntType && b instanceof IntType)
-                ||(a instanceof BoolType && b instanceof BoolType) || (a instanceof NullType && b instanceof NullType)){
+        if((a instanceof IntType && b instanceof IntType) ||(a instanceof BoolType && b instanceof BoolType)
+                || (a instanceof NullType && b instanceof NullType)){
             return true;
         }
 
@@ -417,8 +439,15 @@ public class ExpressionTypeChecker extends Visitor<Type> {
                 return true;
             }
         }
+
         return false;
     }
-    ///
+
+
+//    public void Validate(Type type){
+//
+//    }
+
+
 
 }
