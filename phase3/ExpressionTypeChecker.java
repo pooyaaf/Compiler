@@ -286,10 +286,10 @@ public class ExpressionTypeChecker extends Visitor<Type> {
         {
             return ((ListType) instanceType).getType();
         }
-        boolean wasNotInt = false ;
+
         if ( !(indexType instanceof IntType)) {
             listAccessByIndex.addError(new ListIndexNotInt(listAccessByIndex.getLine()));
-            wasNotInt = true;
+
         }
         if (!(instanceType instanceof ListType)) {
             listAccessByIndex.addError(new AccessByIndexOnNonList(listAccessByIndex.getLine()));
@@ -301,29 +301,30 @@ public class ExpressionTypeChecker extends Visitor<Type> {
     @Override
     public Type visit(StructAccess structAccess) {
         //Todo
-        Type instanceStructType = structAccess.getInstance().accept(this);
-        String variableName = structAccess.getElement().getName();
-        //
-        if (instanceStructType instanceof NoType){
+        Type instType = structAccess.getInstance().accept(this);
+        if(instType instanceof NoType)
+        {
             return new NoType();
         }
-        if (!(instanceStructType instanceof StructType) && !(instanceStructType  instanceof NoType)){
+        if (!(instType instanceof StructType))
+        {
             structAccess.addError(new AccessOnNonStruct(structAccess.getLine()));
+            return new NoType();
         }
-
-        String structName = ((StructType) instanceStructType).getStructName().getName();
+        String varName = structAccess.getElement().getName();
+        String structName = ((StructType) instType).getStructName().getName();
         try
         {
-            StructSymbolTableItem struct = (StructSymbolTableItem) SymbolTable.top.getItem(structName);
+            StructSymbolTableItem struct = (StructSymbolTableItem) SymbolTable.root.getItem(StructSymbolTableItem.START_KEY+structName);
             SymbolTable structTable = struct.getStructSymbolTable();
             try
             {
-                VariableSymbolTableItem element = (VariableSymbolTableItem) structTable.getItem(variableName);
+                VariableSymbolTableItem element = (VariableSymbolTableItem) structTable.getItem(VariableSymbolTableItem.START_KEY+varName);
                 return element.getType();
             }
             catch (ItemNotFoundException ex)
             {
-                structAccess.addError(new StructMemberNotFound(structAccess.getLine(),structName,variableName));
+                structAccess.addError(new StructMemberNotFound(structAccess.getLine(),structName,varName));
                 return new NoType();
             }
         }
@@ -401,7 +402,7 @@ public class ExpressionTypeChecker extends Visitor<Type> {
         this.lvalue = true ;
         return new BoolType();
     }
-
+    // additionals
     public boolean isSubType(Type a, Type b){
         if(a instanceof NoType){
             return true;
@@ -443,7 +444,7 @@ public class ExpressionTypeChecker extends Visitor<Type> {
         return false;
     }
 
-    // additionals
+
     private boolean checkTwoArrayType(ArrayList<Type> a,ArrayList<Type> b)
     {
         for(int i = 0;i <a.size();i++)
