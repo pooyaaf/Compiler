@@ -29,13 +29,16 @@ public class ExpressionTypeChecker extends Visitor<Type> {
     public boolean isCurrentLValue;
     private boolean lvalue = false;
     private boolean functioncall_statement = false;
-
+    private boolean isStatement = false;
     public void set_functioncall_statement(boolean val){this.functioncall_statement = val;}
     public boolean get_functioncall_statemen(){return this.functioncall_statement;}
     public void setLvalue(boolean val){this.lvalue = val;}
     public boolean getLvalue(){return this.lvalue;}
 
-
+    public void setAsStatement()
+    {
+        isStatement = true;
+    }
 
     public Type checkBinaryLogicalOperator(Type firstType , Type secondType , BinaryExpression binaryExpression){
         if(firstType instanceof NoType && secondType instanceof NoType)
@@ -203,37 +206,34 @@ public class ExpressionTypeChecker extends Visitor<Type> {
     @Override
     public Type visit(FunctionCall funcCall) {
         //Todo
-        ////////////////not complete
-        Type instanceType = funcCall.getInstance().accept(this);
-        ArrayList<Type> argsTypes = new ArrayList<>();
-        for(Expression arg : funcCall.getArgs()) {
-            argsTypes.add(arg.accept(this));
-        }
-        if(!(instanceType instanceof FptrType || instanceType instanceof NoType)) {
-            CallOnNoneFptrType exception = new CallOnNoneFptrType(funcCall.getLine());
-            funcCall.addError(exception);
+        Type insType = funcCall.getInstance().accept(this);
+        if(!(insType instanceof FptrType))
+        {
+            funcCall.addError(new CallOnNoneFptrType(funcCall.getLine()));
             return new NoType();
         }
-        if(instanceType instanceof NoType) {
-            return new NoType();
+        if (((FptrType)insType).getReturnType() instanceof VoidType && !isStatement)
+        {
+            funcCall.addError(new CantUseValueOfVoidFunction(funcCall.getLine()));
         }
-        if(argsTypes.size() != funcCall.getArgs().size())
+        isStatement = false;
+
+        ArrayList<Type> args = new ArrayList<>();
+        for(Expression arg :funcCall.getArgs())
+        {
+            Type item = arg.accept(this);
+            args.add(item);
+        }
+        if(args.size() != ((FptrType) insType).getArgsType().size())
         {
             funcCall.addError(new ArgsInFunctionCallNotMatchDefinition(funcCall.getLine()));
-            return new NoType();
+            return ((FptrType) insType).getReturnType();
         }
-        for(int i=0 ; i<=funcCall.getArgs().size();i++){
-            if(!(argsTypes.get(i) instanceof BoolType && ((FptrType) instanceType).getArgsType().get(i) instanceof BoolType) ||
-                    !(argsTypes.get(i) instanceof IntType && ((FptrType) instanceType).getArgsType().get(i) instanceof IntType) ||
-                    !(argsTypes.get(i) instanceof StructType  && ((FptrType) instanceType).getArgsType().get(i) instanceof StructType ) ||
-                    !(argsTypes.get(i) instanceof FptrType  && ((FptrType) instanceType).getArgsType().get(i) instanceof FptrType ) ||
-                    !(argsTypes.get(i) instanceof ListType  && ((FptrType) instanceType).getArgsType().get(i) instanceof ListType )
-            ){
-                funcCall.addError(new ArgsInFunctionCallNotMatchDefinition(funcCall.getLine()));
-                return new NoType();
-            }
+        if(!checkTwoArrayType(((FptrType) insType).getArgsType(),args)){
+            funcCall.addError(new ArgsInFunctionCallNotMatchDefinition(funcCall.getLine()));
+            return ((FptrType) insType).getReturnType();
         }
-        return ((FptrType) instanceType).getReturnType();
+        return ((FptrType) insType).getReturnType();
     }
 
     @Override
@@ -443,11 +443,21 @@ public class ExpressionTypeChecker extends Visitor<Type> {
         return false;
     }
 
-
-//    public void Validate(Type type){
-//
-//    }
-
-
+    // additionals
+    private boolean checkTwoArrayType(ArrayList<Type> a,ArrayList<Type> b)
+    {
+        for(int i = 0;i <a.size();i++)
+        {
+            if((b.get(i) instanceof BoolType && a.get(i) instanceof BoolType ) ||
+                    (b.get(i) instanceof IntType && a.get(i) instanceof IntType ) ||
+                    (b.get(i) instanceof StructType && a.get(i) instanceof StructType ) ||
+                    (b.get(i) instanceof ListType && a.get(i) instanceof ListType ) ||
+                    (b.get(i) instanceof FptrType && a.get(i) instanceof FptrType )) {
+            }else{
+                return false;
+            }
+        }
+        return true;
+    }
 
 }
