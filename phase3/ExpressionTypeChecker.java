@@ -73,20 +73,22 @@ public class ExpressionTypeChecker extends Visitor<Type> {
         else if(firstType instanceof NoType || secondType instanceof NoType){
             return new NoType();
         }
-        if(firstType instanceof IntType || firstType instanceof BoolType) {
+        else if(firstType instanceof IntType || firstType instanceof BoolType) {
             if (firstType.toString().equals(secondType.toString())) {
                 return new BoolType();
             }
         }
-        if((firstType instanceof FptrType && secondType instanceof NullType) ||
-                (firstType instanceof NullType && secondType instanceof FptrType) ||
+        else if((firstType instanceof IntType && secondType instanceof IntType) ||
+                (firstType instanceof BoolType && secondType instanceof BoolType) ||
+                (firstType instanceof StructType && secondType instanceof StructType) ||
                 (firstType instanceof FptrType && secondType instanceof FptrType)) {
             return new BoolType();
         }
         if(firstType instanceof NullType && secondType instanceof NullType)
             return new BoolType();
-        else
-            binaryExpression.addError(new UnsupportedOperandType(binaryExpression.getLine() , binaryExpression.getBinaryOperator().name()));
+        else if (!(firstType instanceof NoType) && !(secondType instanceof NoType)){
+            binaryExpression.addError(new UnsupportedOperandType(binaryExpression.getLine(),binaryExpression.getBinaryOperator().name()));
+        }
         return new NoType();
 
     }
@@ -107,27 +109,40 @@ public class ExpressionTypeChecker extends Visitor<Type> {
         return new NoType();
     }
     public Type checkLessThanOrGreaterThan (Type firstType , Type secondType , BinaryExpression binaryExpression){
-        if(firstType instanceof NoType && secondType instanceof NoType)
+        if((firstType instanceof IntType && secondType instanceof IntType))
+        {
+            if(binaryExpression.getBinaryOperator() == BinaryOperator.lt || binaryExpression.getBinaryOperator() == BinaryOperator.eq ||
+                    binaryExpression.getBinaryOperator() == BinaryOperator.gt  )
+                return new BoolType();
+            return new IntType();
+        }
+
+        else if(firstType instanceof NoType && secondType instanceof NoType)
             return new NoType();
-        else if((firstType instanceof NoType && !(secondType instanceof IntType)) ||
-                (secondType instanceof NoType && !(firstType instanceof IntType))) {
+
+        else if(!(firstType instanceof NoType && secondType instanceof IntType) || !(secondType instanceof NoType && firstType instanceof IntType)) {
             UnsupportedOperandType exception = new UnsupportedOperandType(binaryExpression.getLine(), binaryExpression.getBinaryOperator().name());
             binaryExpression.addError(exception);
             return new NoType();
         }
         else if(firstType instanceof NoType || secondType instanceof NoType)
             return new NoType();
-        if((firstType instanceof IntType) && (secondType instanceof IntType))
-            return new BoolType();
+
         return  new NoType();
     }
     public Type checkAssignOperator(boolean l,Type firstType , Type secondType , BinaryExpression binaryExpression) {
-        if (l) {
-            binaryExpression.addError(new LeftSideNotLvalue(binaryExpression.getLine()));
+        if((firstType instanceof IntType && secondType instanceof IntType) ||
+                (firstType instanceof BoolType && secondType instanceof BoolType) ||
+                (firstType instanceof StructType && secondType instanceof StructType) ||
+                (firstType instanceof FptrType && secondType instanceof FptrType && checkFptrs((FptrType)firstType, (FptrType)secondType)) ||
+                (firstType instanceof ListType && secondType instanceof ListType && checkLists((ListType)firstType,(ListType)secondType)))
+        {
+            return firstType;
         }
-        if(firstType instanceof NoType)
+
+        else if(firstType instanceof NoType)
             return new NoType();
-        if (!isSubType(secondType, firstType)) {
+        else if (!isSubType(secondType, firstType)) {
             UnsupportedOperandType err = new UnsupportedOperandType(binaryExpression.getLine(), binaryExpression.getBinaryOperator().toString());
             binaryExpression.addError(err);
             return new NoType();
@@ -462,6 +477,34 @@ public class ExpressionTypeChecker extends Visitor<Type> {
             }
         }
         return true;
+    }
+    private boolean checkFptrs(FptrType l, FptrType r)
+    {
+        if(l.getReturnType() instanceof IntType && !(r.getReturnType() instanceof IntType))
+            return false;
+        if(l.getReturnType() instanceof BoolType && !(r.getReturnType() instanceof BoolType))
+            return false;
+        if(l.getReturnType() instanceof StructType && !(r.getReturnType() instanceof StructType))
+            return false;
+        if(l.getReturnType() instanceof ListType && !(r.getReturnType() instanceof ListType))
+            return false;
+        if(l.getReturnType() instanceof VoidType && !(r.getReturnType() instanceof VoidType))
+            return false;
+        if(l.getReturnType() instanceof FptrType && !(r.getReturnType() instanceof FptrType))
+            return false;
+        if(l.getArgsType().size() != r.getArgsType().size())
+            return false;
+        return checkTwoArrayType(l.getArgsType(),r.getArgsType());
+    }
+    private boolean checkLists(ListType l, ListType r)
+    {
+        if(l.getType() instanceof IntType && r.getType() instanceof IntType)
+            return true;
+        if(l.getType() instanceof BoolType && r.getType() instanceof BoolType)
+            return true;
+        if(l.getType() instanceof StructType && r.getType() instanceof StructType)
+            return true;
+        return l.getType() instanceof ListType && r.getType() instanceof ListType;
     }
 
 }
