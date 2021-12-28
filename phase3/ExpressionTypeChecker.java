@@ -155,6 +155,8 @@ public class ExpressionTypeChecker extends Visitor<Type> {
         this.lvalue = true;
         Type secondType = binaryExpression.getSecondOperand().accept(this);
         //
+        if(firstType instanceof NoType){ binaryExpression.addError(new VarNotDeclared(binaryExpression.getLine(),binaryExpression.getBinaryOperator().name())); return new NoType();}
+
         if((binaryExpression.getBinaryOperator() == BinaryOperator.and) || (binaryExpression.getBinaryOperator() == BinaryOperator.or) )
             return checkBinaryLogicalOperator(firstType , secondType , binaryExpression);// &  |  Logical Operators
         else if(binaryExpression.getBinaryOperator() == BinaryOperator.eq){
