@@ -1,14 +1,11 @@
 package main.visitor.type;
 
-import com.sun.jdi.LocalVariable;
-import main.ast.nodes.declaration.FunctionDeclaration;
-import main.ast.nodes.declaration.struct.StructDeclaration;
+
 import main.ast.nodes.expression.*;
 import main.ast.nodes.expression.operators.BinaryOperator;
 import main.ast.nodes.expression.operators.UnaryOperator;
 import main.ast.nodes.expression.values.primitive.BoolValue;
 import main.ast.nodes.expression.values.primitive.IntValue;
-import main.ast.nodes.statement.SetGetVarDeclaration;
 import main.ast.types.*;
 import main.ast.types.primitives.BoolType;
 import main.ast.types.primitives.IntType;
@@ -26,7 +23,6 @@ import javax.lang.model.type.NullType;
 import java.util.ArrayList;
 
 public class ExpressionTypeChecker extends Visitor<Type> {
-    public boolean isCurrentLValue;
     private boolean lvalue = false;
     private boolean functioncall_statement = false;
     private boolean isStatement = false;
@@ -227,11 +223,7 @@ public class ExpressionTypeChecker extends Visitor<Type> {
             funcCall.addError(new CallOnNoneFptrType(funcCall.getLine()));
             return new NoType();
         }
-        if (((FptrType)insType).getReturnType() instanceof VoidType && !isStatement)
-        {
-            funcCall.addError(new CantUseValueOfVoidFunction(funcCall.getLine()));
-        }
-        isStatement = false;
+
 
         ArrayList<Type> args = new ArrayList<>();
         for(Expression arg :funcCall.getArgs())
@@ -242,10 +234,20 @@ public class ExpressionTypeChecker extends Visitor<Type> {
         if(args.size() != ((FptrType) insType).getArgsType().size())
         {
             funcCall.addError(new ArgsInFunctionCallNotMatchDefinition(funcCall.getLine()));
+            if (((FptrType)insType).getReturnType() instanceof VoidType && !isStatement)
+            {
+                funcCall.addError(new CantUseValueOfVoidFunction(funcCall.getLine()));
+            }
+            isStatement = false;
             return ((FptrType) insType).getReturnType();
         }
         if(!checkTwoArrayType(((FptrType) insType).getArgsType(),args)){
             funcCall.addError(new ArgsInFunctionCallNotMatchDefinition(funcCall.getLine()));
+            if (((FptrType)insType).getReturnType() instanceof VoidType && !isStatement)
+            {
+                funcCall.addError(new CantUseValueOfVoidFunction(funcCall.getLine()));
+            }
+            isStatement = false;
             return ((FptrType) insType).getReturnType();
         }
         return ((FptrType) insType).getReturnType();
