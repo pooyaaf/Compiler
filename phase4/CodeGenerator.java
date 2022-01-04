@@ -259,6 +259,7 @@ public class  CodeGenerator extends Visitor<String> {
         //todo
         String commands = "";
         Type t = identifier.accept(this.expressionTypeChecker);
+        //
         return null;
     }
     //
@@ -302,14 +303,20 @@ public class  CodeGenerator extends Visitor<String> {
     @Override
     public String visit(ListSize listSize){
         //todo
-        
-        return null;
+        String commands = "";
+        commands += listSize.getArg().accept(this);
+        commands += "invokevirtual java/util/ArrayList/size()I\n";
+        return commands;
     }
 
     @Override
     public String visit(ListAppend listAppend) {
         //todo
-        return null;
+        String commands = "";
+        commands += listAppend.getListArg();
+        commands += listAppend.getElementArg();
+        commands += "invokevirtual java/util/ArrayList/add(Ljava/lang/Object;)Z\n";
+        return commands;
     }
 
     @Override
