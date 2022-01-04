@@ -297,7 +297,27 @@ public class  CodeGenerator extends Visitor<String> {
     @Override
     public String visit(FunctionCall functionCall){
         //todo
-        return null;
+        StringBuilder commands = new StringBuilder();
+        commands.append(functionCall.getInstance().accept(this));
+        commands.append("new java/util/ArrayList\ndup\ninvokespecial java/util/ArrayList/<init>()V\n");
+        for(Expression e : functionCall.getArgs()) {
+            commands.append("dup\n");
+            commands.append(e.accept(this));
+            Type t = e.accept(this.expressionTypeChecker);
+            if(t instanceof IntType)
+                commands.append("invokestatic java/lang/Integer/valueOf(I)Ljava/lang/Integer;\n");
+            if(t instanceof BoolType)
+                commands.append("invokestatic java/lang/Boolean/valueOf(Z)Ljava/lang/Boolean;\n");
+            commands.append("invokevirtual java/util/ArrayList/add(Ljava/lang/Object;)Z\npop\n");
+        }
+        commands.append("invokevirtual Fptr/invoke(Ljava/util/ArrayList;)Ljava/lang/Object;\n");
+        Type t = functionCall.accept(expressionTypeChecker);
+        commands.append(checkCast(t));
+        if(t instanceof IntType)
+            commands.append("invokevirtual java/lang/Integer/intValue()I\n");
+        else if(t instanceof  BoolType)
+            commands.append("invokevirtual java/lang/Boolean/booleanValue()Z\n");
+        return commands.toString();
     }
 
     @Override
