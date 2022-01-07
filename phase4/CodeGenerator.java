@@ -23,6 +23,12 @@ public class  CodeGenerator extends Visitor<String> {
     ExpressionTypeChecker expressionTypeChecker = new ExpressionTypeChecker();
     private String outputPath;
     private FileWriter currentFile;
+    private static int label = 0;
+
+    private static String getLabel(int l)
+    {
+        return "Label" + Integer.toString(l);
+    }
 
     private void copyFile(String toBeCopied, String toBePasted) {
         try {
@@ -170,7 +176,29 @@ public class  CodeGenerator extends Visitor<String> {
     @Override
     public String visit(ConditionalStmt conditionalStmt) {
         //todo
-        return null;
+         /*
+                [condition]
+                ifeq ELSE
+                [consequenceBody]
+                goto END
+          ELSE:
+                [alternativeBody]
+          END:
+         */
+        int elseLabel = label++;
+        int endLabel = label++;
+        String commands = "";
+        commands += conditionalStmt.getCondition().accept(this);
+        commands += "   ifeq " + getLabel(elseLabel) + "\n";
+        if(conditionalStmt.getThenBody() != null)
+            conditionalStmt.getThenBody().accept(this);
+        commands += "   goto " + getLabel(endLabel) + "\n" + getLabel(elseLabel) + ":\n" ;
+        if(conditionalStmt.getElseBody() != null)
+            commands += conditionalStmt.getElseBody().accept(this);
+        commands += getLabel(endLabel) + ":\n";
+
+        addCommand(commands);
+        return commands;
     }
 
     @Override
@@ -215,6 +243,7 @@ public class  CodeGenerator extends Visitor<String> {
     @Override
     public String visit(LoopStmt loopStmt) {
         //todo
+      
         return null;
     }
 
