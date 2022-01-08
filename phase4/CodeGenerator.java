@@ -23,9 +23,12 @@ import java.util.*;
 public class  CodeGenerator extends Visitor<String> {
     ExpressionTypeChecker expressionTypeChecker = new ExpressionTypeChecker();
     private String outputPath;
+    private int numOfUsedTemp = 0;
     private FileWriter currentFile;
     private static int label = 0;
     private boolean inDefaultConst=false;
+    public StructDeclaration currentStruct = new StructDeclaration();
+    public FunctionDeclaration currentFunction = new FunctionDeclaration();
     private boolean hasConflict(String key) {
         try {
             SymbolTable.root.getItem(key);
@@ -118,7 +121,7 @@ public class  CodeGenerator extends Visitor<String> {
         addCommand(".limit stack 128");
         addCommand(".limit locals 128");
         addCommand("aload 0");
-        // here should we accpet current struct body
+        currentStruct.getBody().accept(this);
         addCommand("return");
         addCommand(".end method");
         inDefaultConst = false;
@@ -126,7 +129,17 @@ public class  CodeGenerator extends Visitor<String> {
     }
     private int slotOf(String identifier) {
         //todo
-
+        int count = 1;
+        for(VariableDeclaration arg : currentFunction.getArgs()){
+            if(arg.getVarName().getName().equals(identifier))
+                return count;
+            count++;
+        }
+        if (identifier.equals("")){
+            int temp = numOfUsedTemp;
+            numOfUsedTemp++;
+            return count + temp;
+        }
         return 0;
     }
 
@@ -151,13 +164,15 @@ public class  CodeGenerator extends Visitor<String> {
     @Override
     public String visit(StructDeclaration structDeclaration) {
         //todo
-
+        currentStruct = structDeclaration;
+        addDefaultConstructor(structDeclaration.getStructName().getName());
         return null;
     }
 
     @Override
     public String visit(FunctionDeclaration functionDeclaration) {
         //todo
+        currentFunction = functionDeclaration;
         return null;
     }
 
@@ -202,7 +217,8 @@ public class  CodeGenerator extends Visitor<String> {
             }
             //Default constructor:
             if(inDefaultConst){
-                //should be done
+                commands += "aload 0\n" + initCommands + "putfield " + currentStruct.getStructName().getName() +
+                "/" + varName + " L" + type + ";\n";
             }
             else{
                 commands = initCommands;
@@ -505,7 +521,17 @@ public class  CodeGenerator extends Visitor<String> {
     @Override
     public String visit(StructAccess structAccess){
         //todo
-        return null;
+        String name =  structAccess.getInstance().accept(this);
+        int slotNum = slotOf(name);
+        Type type = structAccess.accept(this.expressionTypeChecker);
+        //
+        String commands = "";
+        commands += "aload " + slotNum + "\n";
+        if(type instanceof IntType)
+            commands += "invokevirtual java/lang/Integer/intValue()I\n";
+        if(type instanceof BoolType)
+            commands += "invokevirtual java/lang/Boolean/booleanValue()Z\n";
+        return commands;
     }
 
     @Override
