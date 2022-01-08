@@ -25,6 +25,7 @@ public class  CodeGenerator extends Visitor<String> {
     private String outputPath;
     private FileWriter currentFile;
     private static int label = 0;
+    private boolean inDefaultConst=false;
     private boolean hasConflict(String key) {
         try {
             SymbolTable.root.getItem(key);
@@ -109,7 +110,20 @@ public class  CodeGenerator extends Visitor<String> {
         addCommand("return");
         addCommand(".end method");
     }
+    private void addDefaultConstructor(String structName)
+    {
+        inDefaultConst = true;
 
+        addCommand(".method public <init>()V");
+        addCommand(".limit stack 128");
+        addCommand(".limit locals 128");
+        addCommand("aload 0");
+        // here should we accpet current struct body
+        addCommand("return");
+        addCommand(".end method");
+        inDefaultConst = false;
+
+    }
     private int slotOf(String identifier) {
         //todo
 
@@ -156,6 +170,56 @@ public class  CodeGenerator extends Visitor<String> {
     @Override
     public String visit(VariableDeclaration variableDeclaration) {
         //todo
+        String varName = variableDeclaration.getVarName().getName();
+        int slot = slotOf(varName);
+        //
+        Type type = variableDeclaration.getVarType();
+        if(variableDeclaration.getDefaultValue() != null){
+            addCommand(variableDeclaration.getDefaultValue().accept(this));
+        }
+        //
+        else{
+            String commands = "";
+            String initCommands ="";
+            if (type instanceof FptrType) {
+                initCommands+="aconst_null"+"\n";
+            }
+            else if(type instanceof StructType){
+                initCommands +="new "+((StructType) type).getStructName().getName()+"\n";
+                initCommands += "dup\n";
+                initCommands += "invokespecial "+((StructType) type).getStructName().getName()+"/<init>()V\n";
+            }
+            else if(type instanceof BoolType || type instanceof IntType){
+                initCommands += "ldc 0\n";
+            }
+            else {
+                initCommands += "new List\n"+
+                        "dup\n"+
+                        "new java/util/ArrayList\n"+
+                        "dup\n"+
+                        "invokespecial java/util/ArrayList/<init>()V\n"+
+                        "invokespecial java/<init>/(Ljava/util/ArrayList;)V\n";
+            }
+            //Default constructor:
+            if(inDefaultConst){
+               //should be done
+            }
+            else{
+                commands = initCommands;
+            }
+            addCommand(commands);
+        }
+        //
+        if(type instanceof IntType){
+            addCommand("invokestatic java/lang/Integer/valueOf(I)Ljava/lang/Integer;");
+        }
+        if(type instanceof BoolType){
+            addCommand("invokestatic java/lang/Boolean/valueOf(Z)Ljava/lang/Boolean;");
+        }
+
+        addCommand("astore "+slot);
+
+
         return null;
     }
 
