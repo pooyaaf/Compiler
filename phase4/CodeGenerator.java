@@ -202,7 +202,7 @@ public class  CodeGenerator extends Visitor<String> {
             }
             //Default constructor:
             if(inDefaultConst){
-               //should be done
+                //should be done
             }
             else{
                 commands = initCommands;
@@ -368,19 +368,26 @@ public class  CodeGenerator extends Visitor<String> {
     @Override
     public String visit(VarDecStmt varDecStmt) {
         //todo
+        for(VariableDeclaration var:varDecStmt.getVars()){
+            var.accept(this);
+        }
         return null;
     }
 
     @Override
     public String visit(ListAppendStmt listAppendStmt) {
         //todo
+        expressionTypeChecker.setInFunctionCallStmt(true);
+        listAppendStmt.getListAppendExpr().accept(this);
+        expressionTypeChecker.setInFunctionCallStmt(false);
         return null;
     }
 
     @Override
     public String visit(ListSizeStmt listSizeStmt) {
         //todo
-
+        listSizeStmt.getListSizeExpr().accept(this);
+        addCommand("pop");
         return null;
     }
 
