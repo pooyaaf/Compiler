@@ -1,24 +1,30 @@
 package main.visitor.codeGenerator;
 
-import main.ast.nodes.*;
-import main.ast.nodes.declaration.*;
-import main.ast.nodes.declaration.struct.*;
+import main.ast.nodes.Program;
+import main.ast.nodes.declaration.FunctionDeclaration;
+import main.ast.nodes.declaration.MainDeclaration;
+import main.ast.nodes.declaration.VariableDeclaration;
+import main.ast.nodes.declaration.struct.StructDeclaration;
 import main.ast.nodes.expression.*;
-import main.ast.nodes.expression.operators.*;
-import main.ast.nodes.expression.values.*;
-import main.ast.nodes.expression.values.primitive.*;
+import main.ast.nodes.expression.operators.BinaryOperator;
+import main.ast.nodes.expression.values.primitive.BoolValue;
+import main.ast.nodes.expression.values.primitive.IntValue;
 import main.ast.nodes.statement.*;
-import main.ast.types.*;
-import main.ast.types.primitives.*;
-import main.symbolTable.*;
-import main.symbolTable.exceptions.*;
+import main.ast.types.FptrType;
+import main.ast.types.ListType;
+import main.ast.types.StructType;
+import main.ast.types.Type;
+import main.ast.types.primitives.BoolType;
+import main.ast.types.primitives.IntType;
+import main.ast.types.primitives.VoidType;
+import main.symbolTable.SymbolTable;
+import main.symbolTable.exceptions.ItemNotFoundException;
 import main.symbolTable.items.FunctionSymbolTableItem;
 import main.visitor.Visitor;
 import main.visitor.type.ExpressionTypeChecker;
 
 import javax.lang.model.type.NullType;
 import java.io.*;
-import java.util.*;
 
 public class  CodeGenerator extends Visitor<String> {
     ExpressionTypeChecker expressionTypeChecker = new ExpressionTypeChecker();
@@ -26,6 +32,7 @@ public class  CodeGenerator extends Visitor<String> {
     private int numOfUsedTemp = 0;
     private FileWriter currentFile;
     private static int label = 0;
+    public boolean isInStruct = false;
     private boolean inDefaultConst=false;
     public StructDeclaration currentStruct = new StructDeclaration();
     public FunctionDeclaration currentFunction = new FunctionDeclaration();
@@ -41,7 +48,6 @@ public class  CodeGenerator extends Visitor<String> {
     {
         return "Label" + Integer.toString(l);
     }
-
     private void copyFile(String toBeCopied, String toBePasted) {
         try {
             File readingFile = new File(toBeCopied);
@@ -104,6 +110,25 @@ public class  CodeGenerator extends Visitor<String> {
         }
     }
 
+    private void addDefaultConstructor(String structName)
+    {
+        inDefaultConst = true;
+
+//        addCommand(".method public <init>()V");
+//        addCommand(".limit stack 128");
+//        addCommand(".limit locals 128");
+//        addCommand("aload 0");
+//        if(currentStruct.getParentClassName() == null)
+//            addCommand("invokespecial java/lang/Object/<init>()V");
+//        else
+//            addCommand("invokespecial " + currentClass.getParentClassName().getName() + "/<init>()V");
+//        for(FieldDeclaration fieldDeclaration : currentClass.getFields())
+//            this.initializeVar(fieldDeclaration.getVarDeclaration(), true);
+//        addCommand("return");
+//        addCommand(".end method\n ");
+        inDefaultConst = false;
+
+    }
     private void addStaticMainMethod() {
         addCommand(".method public static main([Ljava/lang/String;)V");
         addCommand(".limit stack 128");
@@ -113,20 +138,7 @@ public class  CodeGenerator extends Visitor<String> {
         addCommand("return");
         addCommand(".end method");
     }
-    private void addDefaultConstructor(String structName)
-    {
-        inDefaultConst = true;
 
-        addCommand(".method public <init>()V");
-        addCommand(".limit stack 128");
-        addCommand(".limit locals 128");
-        addCommand("aload 0");
-        currentStruct.getBody().accept(this);
-        addCommand("return");
-        addCommand(".end method");
-        inDefaultConst = false;
-
-    }
     private int slotOf(String identifier) {
         //todo
         int count = 1;
@@ -164,21 +176,31 @@ public class  CodeGenerator extends Visitor<String> {
     @Override
     public String visit(StructDeclaration structDeclaration) {
         //todo
-        currentStruct = structDeclaration;
-        addDefaultConstructor(structDeclaration.getStructName().getName());
+        isInStruct = true;
+        createFile(structDeclaration.getStructName().getName());
+        addCommand(".class public " + structDeclaration.getStructName().getName());
+        addCommand(".super java/lang/Object\n ");
+        //should be done
+//        Type type = ;
+//        currentStruct = structDeclaration;
+//        addDefaultConstructor(structDeclaration.getStructName().getName());
+        isInStruct = false;
         return null;
     }
 
     @Override
     public String visit(FunctionDeclaration functionDeclaration) {
         //todo
-        currentFunction = functionDeclaration;
+        String header = "";
+        header += ".class public <init>";
+
         return null;
     }
 
     @Override
     public String visit(MainDeclaration mainDeclaration) {
         //todo
+
         return null;
     }
 
@@ -218,7 +240,7 @@ public class  CodeGenerator extends Visitor<String> {
             //Default constructor:
             if(inDefaultConst){
                 commands += "aload 0\n" + initCommands + "putfield " + currentStruct.getStructName().getName() +
-                "/" + varName + " L" + type + ";\n";
+                        "/" + varName + " L" + type + ";\n";
             }
             else{
                 commands = initCommands;
@@ -513,6 +535,7 @@ public class  CodeGenerator extends Visitor<String> {
         addCommand(commands);
         return commands;
     }
+
     @Override
     public String visit(UnaryExpression unaryExpression){
         return null;
@@ -543,6 +566,11 @@ public class  CodeGenerator extends Visitor<String> {
         int slot = slotOf(identifier.getName());
         if(hasConflict(FunctionSymbolTableItem.START_KEY + identifier.getName())){
             //should be done
+            commands += "new Fptr\n";
+            commands += "dup\n";
+            commands += "aload_0\n";
+            commands += "ldc " + identifier.getName() + "\n";
+            commands += ("invokevirtual Fptr/invoke(Ljava/util/ArrayList;)Ljava/lang/Object;\n");
         }
         else{
             commands += "aload " + slot + "\n";
