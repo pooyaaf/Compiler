@@ -648,8 +648,16 @@ public class  CodeGenerator extends Visitor<String> {
     public String visit(ListAppend listAppend) {
         //todo
         String commands = "";
-        commands += listAppend.getListArg();
-        commands += listAppend.getElementArg();
+        Type type = listAppend.getElementArg().accept(expressionTypeChecker);
+        commands += listAppend.getListArg().accept(this);
+        commands += listAppend.getElementArg().accept(this);
+        if(type instanceof IntType){
+            addCommand("invokestatic java/lang/Integer/valueOf(I)Ljava/lang/Integer;");
+        }
+        if(type instanceof BoolType){
+            addCommand("invokestatic java/lang/Boolean/valueOf(Z)Ljava/lang/Boolean;");
+        }
+
         commands += "invokevirtual java/util/ArrayList/add(Ljava/lang/Object;)Z\n";
         return commands;
     }
