@@ -420,7 +420,7 @@ public class  CodeGenerator extends Visitor<String> {
     public String visit(ListAppendStmt listAppendStmt) {
         //todo
         expressionTypeChecker.setInFunctionCallStmt(true);
-        listAppendStmt.getListAppendExpr().accept(this);
+        addCommand(listAppendStmt.getListAppendExpr().accept(this));
         expressionTypeChecker.setInFunctionCallStmt(false);
         return null;
     }
@@ -428,8 +428,8 @@ public class  CodeGenerator extends Visitor<String> {
     @Override
     public String visit(ListSizeStmt listSizeStmt) {
         //todo
-        listSizeStmt.getListSizeExpr().accept(this);
-        addCommand("pop");
+        addCommand(listSizeStmt.getListSizeExpr().accept(this));
+        //addCommand("pop");
         return null;
     }
 
