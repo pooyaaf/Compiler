@@ -337,20 +337,17 @@ public class  CodeGenerator extends Visitor<String> {
                     [alternativeBody]
               END:
              */
-        int elseLabel = label++;
-        int endLabel = label++;
-        String commands = "";
-        commands += conditionalStmt.getCondition().accept(this);
-        commands += "   ifeq " + getLabel(elseLabel) + "\n";
-        if(conditionalStmt.getThenBody() != null)
-            conditionalStmt.getThenBody().accept(this);
-        commands += "   goto " + getLabel(endLabel) + "\n" + getLabel(elseLabel) + ":\n" ;
-        if(conditionalStmt.getElseBody() != null)
-            commands += conditionalStmt.getElseBody().accept(this);
-        commands += getLabel(endLabel) + ":\n";
-
-        addCommand(commands);
-        return commands;
+        String ELSE = getFreshLabel();
+        String END = getFreshLabel();
+        addCommand(conditionalStmt.getCondition().accept(this));
+        addCommand("ifeq " + ELSE);
+        conditionalStmt.getThenBody().accept(this);
+        addCommand("goto " + END);
+        addCommand(ELSE + ":");
+        if (conditionalStmt.getElseBody() != null)
+            conditionalStmt.getElseBody().accept(this);
+        addCommand(END + ":");
+        return null;
     }
 
     @Override
