@@ -1,0 +1,34 @@
+
+       ArrayList<String> arg =new ArrayList<>();
+        for (Expression e:
+             functionCall.getArgs()) {
+            String init = e.accept(this);
+            Type t = e.accept(expressionTypeChecker);
+            if(t instanceof ListType){
+                String bc = init ;
+                init ="new List\n";
+                init +="dup\n";
+                init += bc;
+                init += "invokespecial List/<init>(LList;)V\n";
+            }
+            arg.add(init);
+
+
+        }
+
+        String commands = "";
+        commands += functionCall.getInstance().accept(this);
+        commands += "new java/util/ArrayList";
+        commands += "dup";
+        commands += "invokespecial java/util/ArrayList/<init>()V";
+
+        for (String init:arg) {
+            commands += "dup\n";
+            commands += init;
+            commands += "invokevirtual java/util/ArrayList/add(Ljava/lang/Object;)Z\n";
+            commands += "pop\n";
+        }
+        commands += "invokevirtual Fptr/invoke(Ljava/util/ArrayList;)Ljava/lang/Object;\n";
+
+        Type retType = functionCall.accept(expressionTypeChecker);
+        commands += checkCast(retType);
