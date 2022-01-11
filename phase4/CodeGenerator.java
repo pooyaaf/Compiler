@@ -120,26 +120,26 @@ public class  CodeGenerator extends Visitor<String> {
         addCommand("invokespecial java/util/ArrayList/<init>()V");
 
         Type element = listType.getType();
-            addCommand("dup");
+        addCommand("dup");
 
-            if(element instanceof StructType || element instanceof FptrType){
-                addCommand("aconst_null");
-                addCommand("invokevirtual java/util/ArrayList/add(Ljava/lang/Object;)Z");
-            }
-            else if(element instanceof IntType || element instanceof BoolType){
-                addCommand("ldc 0");
-                if(element instanceof IntType)
-                    addCommand("invokestatic java/lang/Integer/valueOf(I)Ljava/lang/Integer;");
-                if(element instanceof BoolType)
-                    addCommand("invokestatic java/lang/Boolean/valueOf(Z)Ljava/lang/Boolean;");
-                addCommand("invokevirtual java/util/ArrayList/add(Ljava/lang/Object;)Z");
-            }
-            else{
-                initializeList((ListType) element);
-                addCommand("invokevirtual java/util/ArrayList/add(Ljava/lang/Object;)Z");
-            }
+        if(element instanceof StructType || element instanceof FptrType){
+            addCommand("aconst_null");
+            addCommand("invokevirtual java/util/ArrayList/add(Ljava/lang/Object;)Z");
+        }
+        else if(element instanceof IntType || element instanceof BoolType){
+            addCommand("ldc 0");
+            if(element instanceof IntType)
+                addCommand("invokestatic java/lang/Integer/valueOf(I)Ljava/lang/Integer;");
+            if(element instanceof BoolType)
+                addCommand("invokestatic java/lang/Boolean/valueOf(Z)Ljava/lang/Boolean;");
+            addCommand("invokevirtual java/util/ArrayList/add(Ljava/lang/Object;)Z");
+        }
+        else{
+            initializeList((ListType) element);
+            addCommand("invokevirtual java/util/ArrayList/add(Ljava/lang/Object;)Z");
+        }
 
-            addCommand("pop");
+        addCommand("pop");
 
         addCommand("invokespecial List/<init>(Ljava/util/ArrayList;)V");
     }
@@ -529,19 +529,19 @@ public class  CodeGenerator extends Visitor<String> {
                     goto CHECK_COND
                 END :
              */
+        String commands = "";
         if(loopStmt.getIsDoWhile() != true){
-            String labelStart = getFreshLabel();
-            String labelAfter = getFreshLabel();
-            String labelUpdate = getFreshLabel();
-            addCommand(labelStart + ":");
-            if (loopStmt.getCondition() != null) {
-                addCommand(loopStmt.getCondition().accept(this));
-                addCommand("ifeq " + labelAfter);
-            }
-            loopStmt.getBody().accept(this);
-            addCommand(labelUpdate + ":");
-            addCommand("goto " + labelStart);
-            addCommand(labelAfter + ":");
+            String labelCond = getFreshLabel();
+            String labelBody = getFreshLabel();
+
+            Expression Cond = loopStmt.getCondition();
+            Statement body = loopStmt.getBody();
+
+            commands += labelCond+":\n";
+            commands += body.accept(this);
+            commands += labelCond + ":\n";
+            commands += Cond.accept(this);
+            commands += "ifne "+labelBody+"\n";
 
         }
         /*
@@ -553,18 +553,21 @@ public class  CodeGenerator extends Visitor<String> {
          *   END :
          */
         else{
-            int labelDO = label++;
-            int labelCond = label++;
-            int labelEnd = label++;
-            String commands = getLabel(labelDO) + ":\n";
-            commands += loopStmt.getBody().accept(this);
-            commands += getLabel(labelCond) + ":\n";
-            commands += loopStmt.getCondition().accept(this) +"   ifeq " + getLabel(labelEnd) + "\n";
-            commands += "   goto " +getLabel(labelDO)+ " \n"+ getLabel(labelEnd) + ":\n";
-            addCommand(commands);
-            return commands;
+
+            String CommandCond =getFreshLabel();
+            String CommandBody = getFreshLabel();
+
+            Expression Cond = loopStmt.getCondition();
+            Statement body = loopStmt.getBody();
+
+            commands +="goto "+ CommandCond +"\n";
+            commands += CommandBody+":\n";
+            commands += body.accept(this);
+            commands += CommandCond+":\n";
+            commands += Cond.accept(this);
+            commands += "ifne "+ CommandBody+"\n";
         }
-    return null;
+        return commands;
     }
 
     @Override
