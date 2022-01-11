@@ -535,6 +535,10 @@ public class  CodeGenerator extends Visitor<String> {
             String labelBody = getFreshLabel();
 
             Expression Cond = loopStmt.getCondition();
+//            if(Cond.equals(false)){
+//                return commands;
+//
+//            }
             Statement body = loopStmt.getBody();
 
             commands += labelCond+":\n";
@@ -566,6 +570,8 @@ public class  CodeGenerator extends Visitor<String> {
             commands += CommandCond+":\n";
             commands += Cond.accept(this);
             commands += "ifne "+ CommandBody+"\n";
+            return commands;
+
         }
         return commands;
     }
@@ -743,7 +749,6 @@ public class  CodeGenerator extends Visitor<String> {
                 commands += index.accept(this);
                 commands += secondOperandCommands;
                 commands += "invokevirtual List/setElement(ILjava/lang/Object;)V\n";
-
                 commands += instance.accept(this);
                 commands += index.accept(this);
                 commands += "invokevirtual List/getElement(I)Ljava/lang/Object;\n";
@@ -894,18 +899,18 @@ public class  CodeGenerator extends Visitor<String> {
         return commands;
 
 
-        //        String commands = "";
-//        commands += functionCall.getInstance().accept(this);
-//        commands += "new add/ArrayList\n";
-//        commands +="dup\n";
-//        commands += "invokespecial java/util/ArrayList/<init>()V\n";
-//        for (var arg:functionCall.getArgs()   ) {
-//            commands += "dup\n";
-//            commands +=arg.accept(this);
-//            commands += "invokevirtual List/getNameObject(Ljava/lang/Object;)Ljava/lang/Object;\n";
-//        }
-//        commands +="invokevirtual Fptr/invoke(Ljava/util/ArrayList;)Ljava/lang/Object;\n";
-//        return  commands;
+        /*        String commands = "";
+        commands += functionCall.getInstance().accept(this);
+        commands += "new add/ArrayList\n";
+        commands +="dup\n";
+        commands += "invokespecial java/util/ArrayList/<init>()V\n";
+        for (var arg:functionCall.getArgs()   ) {
+            commands += "dup\n";
+            commands +=arg.accept(this);
+            commands += "invokevirtual List/getNameObject(Ljava/lang/Object;)Ljava/lang/Object;\n";
+        }
+        commands +="invokevirtual Fptr/invoke(Ljava/util/ArrayList;)Ljava/lang/Object;\n";
+        return  commands;*/
     }
 
     @Override
