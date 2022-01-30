@@ -365,31 +365,31 @@ public class  CodeGenerator extends Visitor<String> {
     public String visit(VariableDeclaration variableDeclaration) {
         //todo
 
-        if(isInStruct){
-            String varName = variableDeclaration.getVarName().getName();
-            Type varType = variableDeclaration.getVarType();
-
-            if(varType instanceof StructType || varType instanceof FptrType){
-                addCommand("aload 0");
-                addCommand("aconst_null");
-                addCommand("putfield " + currentStruct.getStructName().getName() + "/" + varName + " L" + makeTypeSignature(varType) + ";\n");
-            }
-            else if(varType instanceof IntType || varType instanceof BoolType){
-                addCommand("aload 0");
-                addCommand("ldc 0");
-                if(varType instanceof IntType)
-                    addCommand("invokestatic java/lang/Integer/valueOf(I)Ljava/lang/Integer;");
-                if(varType instanceof BoolType)
-                    addCommand("invokestatic java/lang/Boolean/valueOf(Z)Ljava/lang/Boolean;");
-                addCommand("putfield " + currentStruct.getStructName().getName() + "/" + varName + " L" + makeTypeSignature(varType) + ";\n");
-            }
-            else{
-                addCommand("aload 0");
-                initializeList((ListType) varType);
-                addCommand("putfield " + currentStruct.getStructName().getName() + "/" + varName + " L" + makeTypeSignature(varType) + ";\n");
-            }
-            return null;
-        }
+//        if(isInStruct){
+//            String varName = variableDeclaration.getVarName().getName();
+//            Type varType = variableDeclaration.getVarType();
+//
+//            if(varType instanceof StructType || varType instanceof FptrType){
+//                addCommand("aload 0");
+//                addCommand("aconst_null");
+//                addCommand("putfield " + currentStruct.getStructName().getName() + "/" + varName + " L" + makeTypeSignature(varType) + ";\n");
+//            }
+//            else if(varType instanceof IntType || varType instanceof BoolType){
+//                addCommand("aload 0");
+//                addCommand("ldc 0");
+//                if(varType instanceof IntType)
+//                    addCommand("invokestatic java/lang/Integer/valueOf(I)Ljava/lang/Integer;");
+//                if(varType instanceof BoolType)
+//                    addCommand("invokestatic java/lang/Boolean/valueOf(Z)Ljava/lang/Boolean;");
+//                addCommand("putfield " + currentStruct.getStructName().getName() + "/" + varName + " L" + makeTypeSignature(varType) + ";\n");
+//            }
+//            else{
+//                addCommand("aload 0");
+//                initializeList((ListType) varType);
+//                addCommand("putfield " + currentStruct.getStructName().getName() + "/" + varName + " L" + makeTypeSignature(varType) + ";\n");
+//            }
+//            return null;
+//        }
 
 
 
